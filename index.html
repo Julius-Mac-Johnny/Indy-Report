@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Spot-On Indy V21</title>
+  <title>Request-Indy V2</title>
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -11,7 +11,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
 
   <style>
-    /* --- 2. THEME ENGINE (CSS VARIABLES) --- */
+    /* --- 2. THEME ENGINE & VARIABLES --- */
     :root {
       /* Default: APPLE MAPS AESTHETIC */
       --font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
@@ -20,10 +20,10 @@
       --card-blur: blur(20px);
       --text-main: #000000;
       --text-sub: #8E8E93;
-      --primary: #007AFF; /* Apple Blue */
-      --danger: #FF3B30;  /* Apple Red */
-      --success: #34C759; /* Apple Green */
-      --radius: 20px;     /* Rounded corners */
+      --primary: #007AFF; 
+      --danger: #FF3B30;  
+      --success: #34C759; 
+      --radius: 20px;
       --shadow: 0 8px 32px rgba(0,0,0,0.12);
       --border: 0.5px solid rgba(0,0,0,0.1);
       --input-bg: rgba(118, 118, 128, 0.12);
@@ -38,10 +38,10 @@
       --card-blur: none;
       --text-main: #202124;
       --text-sub: #5F6368;
-      --primary: #1A73E8; /* Google Blue */
-      --danger: #D93025;  /* Google Red */
-      --success: #1E8E3E; /* Google Green */
-      --radius: 8px;      /* Square corners */
+      --primary: #1A73E8; 
+      --danger: #D93025;  
+      --success: #1E8E3E; 
+      --radius: 8px;      
       --shadow: 0 2px 6px rgba(0,0,0,0.3);
       --border: none;
       --input-bg: #F1F3F4;
@@ -72,7 +72,7 @@
       border: var(--border); box-shadow: var(--shadow);
       height: 50px; border-radius: 25px;
       display: flex; align-items: center; padding: 0 6px; gap: 8px;
-      width: 90%; max-width: 500px; transition: all 0.3s ease;
+      width: 90%; max-width: 600px; transition: all 0.3s ease;
     }
 
     /* Find Me Button */
@@ -86,13 +86,13 @@
     #search-input {
       flex: 1; height: 100%; border: none; background: transparent;
       font-family: var(--font-stack); font-size: 16px; outline: none;
-      color: var(--text-main);
+      color: var(--text-main); min-width: 0;
     }
 
     /* Toggle Switch (Map/Sat) */
     .toggle-pill {
       background: var(--input-bg); border-radius: 18px; padding: 2px;
-      display: flex; height: 36px;
+      display: flex; height: 36px; flex-shrink: 0;
     }
     .toggle-opt {
       padding: 0 12px; border: none; background: transparent; border-radius: 16px;
@@ -102,8 +102,13 @@
       background: var(--card-bg); color: var(--text-main);
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
+    
+    /* Settings/Menu Button */
+    .icon-btn {
+      background: transparent; border: none; font-size: 20px; cursor: pointer; padding: 0 8px;
+    }
 
-    /* --- 5. BOTTOM SHEET (DOCKABLE) --- */
+    /* --- 5. BOTTOM SHEET (DOCKABLE & RESPONSIVE) --- */
     .bottom-sheet {
       position: absolute; bottom: 0; left: 0; right: 0;
       background: var(--card-bg); backdrop-filter: var(--card-blur);
@@ -116,6 +121,17 @@
     /* Minimized State */
     .bottom-sheet.minimized {
       transform: translateY(calc(100% - 30px));
+    }
+
+    /* PC Layout Override */
+    @media (min-width: 768px) {
+      .bottom-sheet {
+        left: auto; right: 20px; bottom: 20px; width: 400px;
+        border-radius: var(--radius); border: var(--border);
+      }
+      .bottom-sheet.minimized {
+        transform: translateY(calc(100% - 40px));
+      }
     }
 
     /* Drag Handle */
@@ -164,27 +180,45 @@
     input[type=range] { flex: 1; accent-color: var(--danger); }
     .slider-lbl { font-size: 11px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; }
 
-    /* --- 6. AUTOCOMPLETE LIST --- */
+    /* --- 6. MODALS (Saved, History, Error, Maps) --- */
+    .modal-overlay {
+      position: absolute; top: 80px; left: 15px; right: 15px; max-width: 600px; margin: 0 auto;
+      background: var(--card-bg); backdrop-filter: var(--card-blur);
+      padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow);
+      z-index: 4000; display: none; flex-direction: column;
+      max-height: 70vh; overflow-y: auto; border: var(--border);
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .modal-title { margin: 0; font-size: 18px; font-weight: 700; }
+    .close-btn { border: none; background: none; font-size: 24px; color: var(--text-sub); cursor: pointer; }
+    
+    .list-item { 
+      padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 14px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .list-item:last-child { border-bottom: none; }
+    .list-content { flex: 1; padding-right: 10px; }
+    .timestamp { font-size: 10px; color: var(--text-sub); display: block; margin-top: 4px; }
+
+    /* Map Engine Selection List */
+    .engine-opt { 
+      padding: 15px; background: var(--input-bg); margin-bottom: 8px; border-radius: 8px; cursor: pointer; font-weight: 600; 
+      border: 2px solid transparent;
+    }
+    .engine-opt.selected { border-color: var(--primary); color: var(--primary); background: white; }
+
+    /* --- 7. AUTOCOMPLETE LIST --- */
     #autocomplete-results {
-      position: absolute; top: 75px; left: 15px; right: 15px; max-width: 500px; margin: 0 auto;
+      position: absolute; top: 75px; left: 15px; right: 15px; max-width: 600px; margin: 0 auto;
       background: var(--card-bg); backdrop-filter: var(--card-blur);
       border-radius: var(--radius); box-shadow: var(--shadow);
       max-height: 250px; overflow-y: auto; display: none; z-index: 3000;
     }
     .ac-item { padding: 14px; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 14px; cursor: pointer; }
     .ac-item strong { color: var(--primary); }
-
-    /* --- 7. SAVED MODAL --- */
-    #saved-modal {
-      position: absolute; top: 80px; left: 20px; right: 20px;
-      background: var(--card-bg); backdrop-filter: var(--card-blur);
-      padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow);
-      z-index: 4000; display: none; flex-direction: column;
-    }
     
     /* Leaflet Overrides */
     .leaflet-control-attribution { display: none; }
-    .leaflet-bar { display: none; } /* Hide zoom controls */
+    .leaflet-bar { display: none; }
   </style>
 </head>
 <body>
@@ -192,24 +226,64 @@
   <div class="top-bar-container">
     <div class="top-bar">
       <button class="btn-find" onclick="findMe()">Find Me</button>
-      <input type="text" id="search-input" placeholder="Search Address..." oninput="handleTyping()">
+      <input type="text" id="search-input" placeholder="Search..." oninput="handleTyping()">
       
       <div class="toggle-pill">
-        <button id="tog-map" class="toggle-opt active" onclick="setBaseMap('clean')">Map</button>
-        <button id="tog-sat" class="toggle-opt" onclick="setBaseMap('sat')">Sat</button>
+        <button id="tog-map" class="toggle-opt active" onclick="setMode('clean')">Map</button>
+        <button id="tog-sat" class="toggle-opt" onclick="setMode('sat')">Sat</button>
       </div>
+      
+      <button class="icon-btn" onclick="toggleMapModal()" title="Map Engines">🗺️</button>
+      <button class="icon-btn" onclick="toggleMenu()" title="Menu">☰</button>
     </div>
   </div>
 
   <div id="autocomplete-results"></div>
 
-  <div id="saved-modal">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-      <h3 style="margin:0; font-size:18px;">Saved Locations</h3>
-      <button onclick="toggleModal()" style="border:none; background:none; font-size:24px; color:var(--text-sub)">&times;</button>
+  <div id="map-modal" class="modal-overlay">
+    <div class="modal-header">
+      <h3 class="modal-title">Select Map Engine</h3>
+      <button class="close-btn" onclick="toggleMapModal()">×</button>
     </div>
-    <div id="saved-list" style="max-height:200px; overflow-y:auto; margin-bottom:15px;"></div>
-    <button class="btn btn-copy" onclick="exportList()">Copy List to Clipboard</button>
+    <div id="engine-list">
+      </div>
+  </div>
+
+  <div id="menu-modal" class="modal-overlay">
+    <div class="modal-header">
+      <h3 class="modal-title">Menu</h3>
+      <button class="close-btn" onclick="toggleMenu()">×</button>
+    </div>
+    
+    <button class="btn btn-save" onclick="toggleSavedModal()" style="margin-bottom:10px">⭐ Saved Points</button>
+    <button class="btn btn-copy" onclick="toggleHistoryModal()" style="margin-bottom:10px">🕒 History</button>
+    <button class="btn btn-verify" onclick="toggleErrorModal()" style="margin-bottom:10px">⚠️ Error Logs</button>
+    <button class="btn btn-verify" onclick="toggleTheme()">🎨 Toggle Theme</button>
+  </div>
+
+  <div id="saved-modal" class="modal-overlay">
+    <div class="modal-header">
+      <h3 class="modal-title">Saved Points</h3>
+      <button class="close-btn" onclick="toggleSavedModal()">×</button>
+    </div>
+    <div id="saved-list"></div>
+    <button class="btn btn-copy" onclick="exportList('saved')" style="margin-top:10px">Copy List</button>
+  </div>
+
+  <div id="history-modal" class="modal-overlay">
+    <div class="modal-header">
+      <h3 class="modal-title">History</h3>
+      <button class="close-btn" onclick="toggleHistoryModal()">×</button>
+    </div>
+    <div id="history-list"></div>
+  </div>
+
+  <div id="error-modal" class="modal-overlay">
+    <div class="modal-header">
+      <h3 class="modal-title">Error Logs</h3>
+      <button class="close-btn" onclick="toggleErrorModal()">×</button>
+    </div>
+    <div id="error-list" style="color:red; font-family:monospace; font-size:12px;"></div>
   </div>
 
   <div id="map"></div>
@@ -239,143 +313,158 @@
       <input type="range" min="0" max="1" step="0.1" value="0" id="gridSlider">
       <span class="slider-lbl" style="color:var(--danger)">City Grid</span>
     </div>
-
-    <button class="btn-style-switch" onclick="toggleTheme()">Switch to Google Style</button>
   </div>
 
 <script>
-  // --- 1. APP STATE ---
+  // --- 1. STATE MANAGEMENT ---
   const state = {
     lat: 0, lng: 0,
     address: "",
     cityCoords: "",
-    saved: [],
     marker: null,
-    isGoogleTheme: false
+    mode: 'clean', // 'clean' or 'sat'
+    activeEngine: { clean: 'osm', sat: 'esri' },
+    errors: [],
+    history: JSON.parse(localStorage.getItem('ri_history')) || [],
+    saved: JSON.parse(localStorage.getItem('ri_saved')) || []
   };
 
-  // --- 2. MAP INITIALIZATION ---
-  // We use standard OSM for "Clean Mode" because it shows POIs (Taco Bell, Gas, etc) best.
+  // --- 2. ERROR LOGGING ---
+  function logError(msg) {
+    console.error(msg);
+    state.errors.push(`${new Date().toLocaleTimeString()}: ${msg}`);
+    const el = document.getElementById('error-list');
+    el.innerHTML = state.errors.map(e => `<div>${e}</div>`).join('');
+  }
+
+  // --- 3. MAP ENGINES ---
+  const engines = {
+    clean: {
+      osm: { name: "OpenStreetMap (Standard)", url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' },
+      carto: { name: "CartoDB Voyager", url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png' },
+      esri: { name: "Esri World Street", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}' }
+    },
+    sat: {
+      esri: { name: "Esri World Imagery", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' },
+      usgs: { name: "USGS Imagery", url: 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}' }
+    }
+  };
+
+  // --- 4. MAP INITIALIZATION ---
   const map = L.map('map', { zoomControl: false, tap: true }).setView([39.7684, -86.1581], 15);
+  
+  // Layer Groups
+  let baseLayer = L.tileLayer(engines.clean.osm.url, { maxZoom: 19 }).addTo(map);
+  
+  // City Layers (IndyGIS)
+  const cityUrl = 'https://xmaps.indy.gov/arcgis/rest/services/SalesForce/MAC311/MapServer';
+  
+  // Layer 18: House Numbers (Always Visible on Zoom)
+  L.esri.dynamicMapLayer({
+    url: cityUrl, layers: [18], opacity: 0.9, f: 'json', minZoom: 17, useCors: false
+  }).addTo(map);
+  
+  // Layer 16: The Grid (Controlled by Slider)
+  const cityGrid = L.esri.dynamicMapLayer({
+    url: cityUrl, layers: [16], opacity: 0, f: 'json', useCors: false
+  }).addTo(map);
 
-  const layers = {
-    // OpenStreetMap Standard (Best for Consumer POIs)
-    clean: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }),
-    // Esri World Imagery (Satellite)
-    sat: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'),
-    // City Layers (IndyGIS)
-    houseNums: L.esri.dynamicMapLayer({
-      url: 'https://xmaps.indy.gov/arcgis/rest/services/SalesForce/MAC311/MapServer',
-      layers: [18], opacity: 1, f: 'json', minZoom: 17, useCors: false // Always visible when zoomed in
-    }),
-    grid: L.esri.dynamicMapLayer({
-      url: 'https://xmaps.indy.gov/arcgis/rest/services/SalesForce/MAC311/MapServer',
-      layers: [16], opacity: 0, f: 'json', useCors: false // Starts invisible
-    })
-  };
-
-  // Add defaults
-  layers.clean.addTo(map);
-  layers.houseNums.addTo(map);
-  layers.grid.addTo(map);
-
-  // --- 3. LOGIC: COORDINATE TRANSLATION ---
-  // Define Indiana State Plane East (EPSG:2965)
+  // --- 5. LOGIC: GEOSPATIAL ---
   if(window.proj4) {
     proj4.defs("EPSG:2965", "+proj=tmerc +lat_0=37.5 +lon_0=-85.66666666666667 +k=0.9999666666666667 +x_0=2960000 +y_0=250000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=us-ft +no_defs");
   }
 
-  // --- 4. INTERACTION HANDLERS ---
-  
-  // Map Click
+  // --- 6. INTERACTION ---
   map.on('click', (e) => {
-    // 1. Move Marker
-    if(state.marker) map.removeLayer(state.marker);
-    state.marker = L.marker(e.latlng).addTo(map);
-    
-    // 2. Open Dock if closed
-    document.getElementById('bottom-sheet').classList.remove('minimized');
-    
-    // 3. Process Data
-    processLocation(e.latlng);
+    try {
+      if(state.marker) map.removeLayer(state.marker);
+      state.marker = L.marker(e.latlng).addTo(map);
+      
+      // Auto-open dock
+      document.getElementById('bottom-sheet').classList.remove('minimized');
+      
+      processLocation(e.latlng);
+    } catch(err) { logError("Map Click: " + err.message); }
   });
 
   function processLocation(latlng) {
-    document.getElementById('result-text').innerText = "Translating...";
+    document.getElementById('result-text').innerText = "Processing...";
     state.lat = latlng.lat;
     state.lng = latlng.lng;
 
-    // A. City Math (Proj4js)
+    // A. City Coordinates
     if(window.proj4) {
-      const indy = proj4("EPSG:4326", "EPSG:2965", [latlng.lng, latlng.lat]);
-      state.cityCoords = `X: ${Math.round(indy[0])}, Y: ${Math.round(indy[1])}`;
+      try {
+        const indy = proj4("EPSG:4326", "EPSG:2965", [latlng.lng, latlng.lat]);
+        state.cityCoords = `X: ${Math.round(indy[0])}, Y: ${Math.round(indy[1])}`;
+      } catch(e) { logError("Proj4: " + e.message); }
     }
 
-    // B. Address Lookup (Nominatim)
-    // Prioritize House Number + Street
+    // B. Address Lookup
     fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latlng.lat}&lon=${latlng.lng}`)
-      .then(r => r.json())
+      .then(r => {
+        if(!r.ok) throw new Error("Nominatim API Error");
+        return r.json();
+      })
       .then(d => {
         const a = d.address;
-        const name = d.name ? d.name + ", " : ""; // POI Name
+        const name = d.name ? d.name + ", " : "";
         const num = a.house_number || "";
         const road = a.road || "Unnamed Location";
         state.address = name + (num ? `${num} ${road}` : road);
-        updateDisplay();
+        updateUI();
+        addToHistory();
       })
-      .catch(() => {
+      .catch((e) => {
         state.address = "Unknown Location";
-        updateDisplay();
+        logError("Geocode: " + e.message);
+        updateUI();
       });
   }
 
-  // UI Update Loop
-  function updateDisplay() {
+  function updateUI() {
     const sliderVal = document.getElementById('gridSlider').value;
     const label = document.getElementById('data-label');
     const val = document.getElementById('data-value');
 
-    // Smart Context: If slider is right (City Mode), show coords. Else show address.
     if(sliderVal > 0.1) {
       label.innerText = "OFFICIAL CITY COORDINATES";
       label.style.color = "var(--danger)";
-      val.innerText = state.cityCoords;
+      val.innerText = state.cityCoords || "Loading...";
     } else {
-      label.innerText = "STANDARD ADDRESS";
+      label.innerText = "STANDARD ADDRESS / POI";
       label.style.color = "var(--text-sub)";
-      val.innerText = state.address;
+      val.innerText = state.address || "Loading...";
     }
   }
 
-  // Slider Logic
-  document.getElementById('gridSlider').addEventListener('input', (e) => {
-    layers.grid.setOpacity(e.target.value);
-    updateDisplay();
-  });
-
-  // Base Map Toggle
-  window.setBaseMap = function(type) {
-    if(type === 'clean') {
-      if(map.hasLayer(layers.sat)) map.removeLayer(layers.sat);
-      if(!map.hasLayer(layers.clean)) map.addLayer(layers.clean);
-      layers.clean.bringToBack();
-      document.getElementById('tog-map').classList.add('active');
-      document.getElementById('tog-sat').classList.remove('active');
-    } else {
-      if(map.hasLayer(layers.clean)) map.removeLayer(layers.clean);
-      if(!map.hasLayer(layers.sat)) map.addLayer(layers.sat);
-      layers.sat.bringToBack();
-      document.getElementById('tog-sat').classList.add('active');
-      document.getElementById('tog-map').classList.remove('active');
-    }
+  // --- 7. MULTI-ENGINE LOGIC ---
+  window.setMode = function(mode) {
+    state.mode = mode;
+    document.getElementById('tog-map').classList.toggle('active', mode === 'clean');
+    document.getElementById('tog-sat').classList.toggle('active', mode === 'sat');
+    refreshBaseLayer();
   }
 
-  // --- 5. GPS LOCATOR ---
+  window.refreshBaseLayer = function() {
+    map.removeLayer(baseLayer);
+    const engineKey = state.activeEngine[state.mode];
+    const url = engines[state.mode][engineKey].url;
+    baseLayer = L.tileLayer(url, { maxZoom: 19 }).addTo(map);
+    baseLayer.bringToBack();
+  }
+
+  window.switchEngine = function(key) {
+    state.activeEngine[state.mode] = key;
+    refreshBaseLayer();
+    renderMapModal(); // Refresh UI selection
+  }
+
+  // --- 8. GPS ---
   window.findMe = function() {
     const btn = document.querySelector('.btn-find');
     btn.innerText = "Locating...";
     
-    // High Accuracy Attempt
     map.locate({setView: true, maxZoom: 18, enableHighAccuracy: true, timeout: 5000});
     
     map.on('locationfound', (e) => {
@@ -385,70 +474,118 @@
       state.marker = L.marker(e.latlng).addTo(map);
     });
 
-    // Low Accuracy Fallback
-    map.on('locationerror', () => {
+    map.on('locationerror', (e) => {
+      logError("GPS Error: " + e.message);
+      // Fallback
       map.locate({setView: true, maxZoom: 18, enableHighAccuracy: false});
       btn.innerText = "Find Me";
     });
   }
 
-  // --- 6. UTILITIES ---
-  
-  // Theme Switcher
-  window.toggleTheme = function() {
-    state.isGoogleTheme = !state.isGoogleTheme;
-    const btn = document.querySelector('.btn-style-switch');
-    if(state.isGoogleTheme) {
-      document.body.classList.add('google-theme');
-      btn.innerText = "Switch to Apple Style";
-    } else {
-      document.body.classList.remove('google-theme');
-      btn.innerText = "Switch to Google Style";
-    }
+  // --- 9. SLIDER ---
+  document.getElementById('gridSlider').addEventListener('input', (e) => {
+    cityGrid.setOpacity(e.target.value);
+    updateUI();
+  });
+
+  // --- 10. HISTORY & SAVED ---
+  function addToHistory() {
+    const item = { 
+      addr: state.address, 
+      coords: state.cityCoords, 
+      ts: new Date().toLocaleString(),
+      date: new Date().toLocaleDateString()
+    };
+    state.history.unshift(item);
+    if(state.history.length > 50) state.history.pop(); // Limit 50
+    localStorage.setItem('ri_history', JSON.stringify(state.history));
   }
 
-  // Dock Logic
-  window.toggleDock = function() {
-    document.getElementById('bottom-sheet').classList.toggle('minimized');
-  }
-
-  // Saved Points
   window.savePoint = function() {
-    if(!state.address) return alert("Select a location first.");
-    state.saved.push({ addr: state.address, coords: state.cityCoords });
-    // Visual feedback
+    if(!state.address) return alert("Select location first");
+    const item = { addr: state.address, coords: state.cityCoords, lat: state.lat, lng: state.lng };
+    state.saved.push(item);
+    localStorage.setItem('ri_saved', JSON.stringify(state.saved));
     L.circleMarker([state.lat, state.lng], { color: 'var(--success)', radius: 6, fillOpacity: 1 }).addTo(map);
-    alert("Location Saved!");
+    alert("Saved!");
   }
 
-  window.toggleModal = function() {
-    const m = document.getElementById('saved-modal');
-    m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
-    renderList();
-  }
-
-  function renderList() {
-    const list = document.getElementById('saved-list');
+  // --- 11. RENDER MODALS ---
+  window.renderMapModal = function() {
+    const list = document.getElementById('engine-list');
     list.innerHTML = "";
-    state.saved.forEach((item, i) => {
-      const div = document.createElement('div');
-      div.style.padding = "10px 0";
-      div.style.borderBottom = "1px solid #eee";
-      div.innerHTML = `<strong>${i+1}. ${item.addr}</strong><br><small>${item.coords}</small> <button onclick="removeSaved(${i})" style="color:red; border:none; background:none; float:right;">Delete</button>`;
-      list.appendChild(div);
+    const currentModeEngines = engines[state.mode];
+    
+    Object.keys(currentModeEngines).forEach(key => {
+      const opt = document.createElement('div');
+      opt.className = `engine-opt ${state.activeEngine[state.mode] === key ? 'selected' : ''}`;
+      opt.innerText = currentModeEngines[key].name;
+      opt.onclick = () => switchEngine(key);
+      list.appendChild(opt);
     });
   }
 
-  window.removeSaved = function(index) {
-    state.saved.splice(index, 1);
-    renderList();
+  window.renderSavedList = function() {
+    const el = document.getElementById('saved-list');
+    el.innerHTML = state.saved.map((item, i) => `
+      <div class="list-item">
+        <div class="list-content"><strong>${item.addr}</strong><br><small>${item.coords}</small></div>
+        <button onclick="removeSaved(${i})" style="color:var(--danger); border:none; background:none; cursor:pointer;">✕</button>
+      </div>
+    `).join('');
   }
 
-  window.exportList = function() {
-    let txt = "SPOT-ON INDY REPORT:\n\n";
-    state.saved.forEach((p, i) => txt += `${i+1}. ${p.addr}\n   ${p.coords}\n\n`);
+  window.renderHistoryList = function() {
+    const el = document.getElementById('history-list');
+    // Group by Date could be done here, simple list for now
+    el.innerHTML = state.history.map(item => `
+      <div class="list-item">
+        <div class="list-content"><strong>${item.addr}</strong><br><span class="timestamp">${item.ts}</span></div>
+      </div>
+    `).join('');
+  }
+
+  window.removeSaved = function(i) {
+    state.saved.splice(i, 1);
+    localStorage.setItem('ri_saved', JSON.stringify(state.saved));
+    renderSavedList();
+  }
+
+  window.exportList = function(type) {
+    const source = type === 'saved' ? state.saved : state.history;
+    let txt = "REQUEST-INDY REPORT:\n\n";
+    source.forEach((p, i) => txt += `${i+1}. ${p.addr}\n   ${p.coords}\n\n`);
     navigator.clipboard.writeText(txt).then(() => alert("Copied to clipboard!"));
   }
+
+  // --- 12. UTILS ---
+  window.toggleDock = () => document.getElementById('bottom-sheet').classList.toggle('minimized');
+  window.toggleMenu = () => document.getElementById('menu-modal').style.display = 'flex';
+  window.toggleMapModal = () => {
+    document.getElementById('map-modal').style.display = 'flex';
+    renderMapModal();
+  }
+  window.toggleSavedModal = () => {
+    document.getElementById('saved-modal').style.display = 'flex';
+    document.getElementById('menu-modal').style.display = 'none';
+    renderSavedList();
+  }
+  window.toggleHistoryModal = () => {
+    document.getElementById('history-modal').style.display = 'flex';
+    document.getElementById('menu-modal').style.display = 'none';
+    renderHistoryList();
+  }
+  window.toggleErrorModal = () => {
+    document.getElementById('error-modal').style.display = 'flex';
+    document.getElementById('menu-modal').style.display = 'none';
+  }
+  
+  // Close buttons for all modals
+  document.querySelectorAll('.close-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.target.closest('.modal-overlay').style.display = 'none';
+    });
+  });
 
   window.smartCopy = function() {
     const sliderVal = document.getElementById('gridSlider').value;
@@ -456,18 +593,22 @@
     navigator.clipboard.writeText(txt).then(() => alert("Copied: " + txt));
   }
 
-  // External Verification Links (No Popups)
-  window.openGoogle = function() {
-    if(!state.lat) return alert("Select location first");
-    window.location.href = `https://www.google.com/maps/search/?api=1&query=${state.lat},${state.lng}`;
+  window.toggleTheme = function() {
+    document.body.classList.toggle('google-theme');
+    document.getElementById('menu-modal').style.display = 'none';
   }
 
-  window.openApple = function() {
-    if(!state.lat) return alert("Select location first");
+  // External Links (No Popups)
+  window.openGoogle = () => {
+    if(!state.lat) return alert("Select location");
+    window.location.href = `https://www.google.com/maps/search/?api=1&query=${state.lat},${state.lng}`;
+  }
+  window.openApple = () => {
+    if(!state.lat) return alert("Select location");
     window.location.href = `http://maps.apple.com/?q=${state.lat},${state.lng}`;
   }
 
-  // Autocomplete Logic
+  // Autocomplete
   let typeTimer;
   window.handleTyping = function() {
     clearTimeout(typeTimer);
@@ -477,7 +618,6 @@
     if(q.length < 3) { list.style.display = 'none'; return; }
 
     typeTimer = setTimeout(() => {
-      // Prioritize Indy area
       const safeQ = q.toLowerCase().includes("indy") ? q : q + ", Indianapolis";
       fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${safeQ}`)
         .then(r => r.json())
