@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Request-Indy V2</title>
+  <title>Request-Indy V3</title>
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -81,6 +81,7 @@
       height: 36px; padding: 0 16px; border-radius: 18px;
       font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
     }
+    .btn-find:active { opacity: 0.8; }
     
     /* Search Input */
     #search-input {
@@ -103,7 +104,7 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
-    /* Settings/Menu Button */
+    /* Menu Button */
     .icon-btn {
       background: transparent; border: none; font-size: 20px; cursor: pointer; padding: 0 8px;
     }
@@ -165,11 +166,8 @@
     .btn-verify { 
       background: transparent; border: 1px solid var(--text-sub); color: var(--text-main); font-size: 14px; opacity: 0.8;
     }
-    
-    /* Theme Toggle Button */
-    .btn-style-switch {
-      width: 100%; background: transparent; color: var(--primary);
-      font-size: 12px; font-weight: 600; margin-top: 10px; cursor: pointer; border: none;
+    .btn-map-select {
+        width: 100%; background: var(--input-bg); color: var(--primary); margin-bottom: 15px; font-size: 14px;
     }
 
     /* Slider */
@@ -180,7 +178,7 @@
     input[type=range] { flex: 1; accent-color: var(--danger); }
     .slider-lbl { font-size: 11px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; }
 
-    /* --- 6. MODALS (Saved, History, Error, Maps) --- */
+    /* --- 6. MODALS --- */
     .modal-overlay {
       position: absolute; top: 80px; left: 15px; right: 15px; max-width: 600px; margin: 0 auto;
       background: var(--card-bg); backdrop-filter: var(--card-blur);
@@ -202,7 +200,7 @@
     /* Map Engine Selection List */
     .engine-opt { 
       padding: 15px; background: var(--input-bg); margin-bottom: 8px; border-radius: 8px; cursor: pointer; font-weight: 600; 
-      border: 2px solid transparent;
+      border: 2px solid transparent; display: flex; justify-content: space-between;
     }
     .engine-opt.selected { border-color: var(--primary); color: var(--primary); background: white; }
 
@@ -233,7 +231,6 @@
         <button id="tog-sat" class="toggle-opt" onclick="setMode('sat')">Sat</button>
       </div>
       
-      <button class="icon-btn" onclick="toggleMapModal()" title="Map Engines">🗺️</button>
       <button class="icon-btn" onclick="toggleMenu()" title="Menu">☰</button>
     </div>
   </div>
@@ -242,7 +239,7 @@
 
   <div id="map-modal" class="modal-overlay">
     <div class="modal-header">
-      <h3 class="modal-title">Select Map Engine</h3>
+      <h3 class="modal-title">Select Map Style</h3>
       <button class="close-btn" onclick="toggleMapModal()">×</button>
     </div>
     <div id="engine-list">
@@ -283,7 +280,7 @@
       <h3 class="modal-title">Error Logs</h3>
       <button class="close-btn" onclick="toggleErrorModal()">×</button>
     </div>
-    <div id="error-list" style="color:red; font-family:monospace; font-size:12px;"></div>
+    <div id="error-list" style="color:var(--danger); font-family:monospace; font-size:12px;"></div>
   </div>
 
   <div id="map"></div>
@@ -297,6 +294,8 @@
       <span class="label-micro" id="data-label">Standard Address</span>
       <div class="val-macro" id="data-value">Tap map to select...</div>
     </div>
+
+    <button class="btn btn-map-select" onclick="toggleMapModal()">Select Map Engine ▾</button>
 
     <div class="btn-grid">
       <button class="btn btn-save" onclick="savePoint()">Save Point</button>
@@ -329,23 +328,24 @@
     saved: JSON.parse(localStorage.getItem('ri_saved')) || []
   };
 
-  // --- 2. ERROR LOGGING ---
+  // --- 2. ERROR LOGGING SYSTEM ---
   function logError(msg) {
     console.error(msg);
     state.errors.push(`${new Date().toLocaleTimeString()}: ${msg}`);
     const el = document.getElementById('error-list');
-    el.innerHTML = state.errors.map(e => `<div>${e}</div>`).join('');
+    if(el) el.innerHTML = state.errors.map(e => `<div>${e}</div>`).join('');
   }
 
-  // --- 3. MAP ENGINES ---
+  // --- 3. MAP ENGINES CONFIGURATION ---
   const engines = {
     clean: {
       osm: { name: "OpenStreetMap (Standard)", url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' },
-      carto: { name: "CartoDB Voyager", url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png' },
-      esri: { name: "Esri World Street", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}' }
+      carto: { name: "CartoDB Voyager (Minimal)", url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png' },
+      esri: { name: "Esri World Street", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}' },
+      toner: { name: "Stamen Toner (High Contrast)", url: 'https://stamen-tiles-{s}.a.ssl.fastly.net/toner/{z}/{x}/{y}.png' }
     },
     sat: {
-      esri: { name: "Esri World Imagery", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' },
+      esri: { name: "Esri Satellite", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' },
       usgs: { name: "USGS Imagery", url: 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}' }
     }
   };
@@ -353,7 +353,7 @@
   // --- 4. MAP INITIALIZATION ---
   const map = L.map('map', { zoomControl: false, tap: true }).setView([39.7684, -86.1581], 15);
   
-  // Layer Groups
+  // Base Layer
   let baseLayer = L.tileLayer(engines.clean.osm.url, { maxZoom: 19 }).addTo(map);
   
   // City Layers (IndyGIS)
@@ -369,12 +369,13 @@
     url: cityUrl, layers: [16], opacity: 0, f: 'json', useCors: false
   }).addTo(map);
 
-  // --- 5. LOGIC: GEOSPATIAL ---
+  // --- 5. GEOSPATIAL LOGIC ---
+  // Define Indiana State Plane East
   if(window.proj4) {
     proj4.defs("EPSG:2965", "+proj=tmerc +lat_0=37.5 +lon_0=-85.66666666666667 +k=0.9999666666666667 +x_0=2960000 +y_0=250000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=us-ft +no_defs");
   }
 
-  // --- 6. INTERACTION ---
+  // --- 6. INTERACTION LOGIC ---
   map.on('click', (e) => {
     try {
       if(state.marker) map.removeLayer(state.marker);
@@ -392,18 +393,18 @@
     state.lat = latlng.lat;
     state.lng = latlng.lng;
 
-    // A. City Coordinates
+    // A. City Coordinates Calculation
     if(window.proj4) {
       try {
         const indy = proj4("EPSG:4326", "EPSG:2965", [latlng.lng, latlng.lat]);
         state.cityCoords = `X: ${Math.round(indy[0])}, Y: ${Math.round(indy[1])}`;
-      } catch(e) { logError("Proj4: " + e.message); }
+      } catch(e) { logError("Proj4 Error: " + e.message); }
     }
 
-    // B. Address Lookup
+    // B. Address Lookup (Reverse Geocode)
     fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latlng.lat}&lon=${latlng.lng}`)
       .then(r => {
-        if(!r.ok) throw new Error("Nominatim API Error");
+        if(!r.ok) throw new Error("API Connection Failed");
         return r.json();
       })
       .then(d => {
@@ -417,7 +418,7 @@
       })
       .catch((e) => {
         state.address = "Unknown Location";
-        logError("Geocode: " + e.message);
+        logError("Geocode Error: " + e.message);
         updateUI();
       });
   }
@@ -427,10 +428,11 @@
     const label = document.getElementById('data-label');
     const val = document.getElementById('data-value');
 
+    // Context-Aware Display
     if(sliderVal > 0.1) {
       label.innerText = "OFFICIAL CITY COORDINATES";
       label.style.color = "var(--danger)";
-      val.innerText = state.cityCoords || "Loading...";
+      val.innerText = state.cityCoords || "Calculating...";
     } else {
       label.innerText = "STANDARD ADDRESS / POI";
       label.style.color = "var(--text-sub)";
@@ -438,7 +440,7 @@
     }
   }
 
-  // --- 7. MULTI-ENGINE LOGIC ---
+  // --- 7. MULTI-ENGINE SWITCHER ---
   window.setMode = function(mode) {
     state.mode = mode;
     document.getElementById('tog-map').classList.toggle('active', mode === 'clean');
@@ -457,15 +459,16 @@
   window.switchEngine = function(key) {
     state.activeEngine[state.mode] = key;
     refreshBaseLayer();
-    renderMapModal(); // Refresh UI selection
+    renderMapModal(); // Refresh UI selection state
   }
 
-  // --- 8. GPS ---
+  // --- 8. ROBUST GPS LOCATOR (V3 Fix) ---
   window.findMe = function() {
     const btn = document.querySelector('.btn-find');
     btn.innerText = "Locating...";
     
-    map.locate({setView: true, maxZoom: 18, enableHighAccuracy: true, timeout: 5000});
+    // Attempt High Accuracy with 10s Timeout
+    map.locate({setView: true, maxZoom: 18, enableHighAccuracy: true, timeout: 10000});
     
     map.on('locationfound', (e) => {
       btn.innerText = "Find Me";
@@ -474,43 +477,59 @@
       state.marker = L.marker(e.latlng).addTo(map);
     });
 
+    // Fallback Logic
     map.on('locationerror', (e) => {
-      logError("GPS Error: " + e.message);
-      // Fallback
-      map.locate({setView: true, maxZoom: 18, enableHighAccuracy: false});
-      btn.innerText = "Find Me";
+      logError(`GPS High-Acc Failed (Code ${e.code}): ${e.message}`);
+      // Fallback to Low Accuracy
+      if(e.code === 3) { // Timeout
+         console.log("Retrying with low accuracy...");
+         map.locate({setView: true, maxZoom: 18, enableHighAccuracy: false});
+      } else {
+         btn.innerText = "Find Me";
+         alert("GPS Error. Check permissions or try verifying in Settings.");
+      }
     });
   }
 
-  // --- 9. SLIDER ---
+  // --- 9. SLIDER LOGIC ---
   document.getElementById('gridSlider').addEventListener('input', (e) => {
     cityGrid.setOpacity(e.target.value);
     updateUI();
   });
 
-  // --- 10. HISTORY & SAVED ---
+  // --- 10. HISTORY & SAVED POINTS ---
   function addToHistory() {
     const item = { 
       addr: state.address, 
       coords: state.cityCoords, 
-      ts: new Date().toLocaleString(),
+      ts: new Date().toLocaleTimeString(),
       date: new Date().toLocaleDateString()
     };
+    // Add to top, limit 50
     state.history.unshift(item);
-    if(state.history.length > 50) state.history.pop(); // Limit 50
+    if(state.history.length > 50) state.history.pop();
     localStorage.setItem('ri_history', JSON.stringify(state.history));
   }
 
   window.savePoint = function() {
-    if(!state.address) return alert("Select location first");
-    const item = { addr: state.address, coords: state.cityCoords, lat: state.lat, lng: state.lng };
+    // V3 Fix: Ensure we have data before saving
+    if(!state.address || state.address === "Unknown Location") return alert("Please select a valid location first.");
+    
+    const item = { 
+      addr: state.address, 
+      coords: state.cityCoords, 
+      lat: state.lat, 
+      lng: state.lng 
+    };
     state.saved.push(item);
     localStorage.setItem('ri_saved', JSON.stringify(state.saved));
+    
+    // Visual Marker
     L.circleMarker([state.lat, state.lng], { color: 'var(--success)', radius: 6, fillOpacity: 1 }).addTo(map);
-    alert("Saved!");
+    alert("Location Saved!");
   }
 
-  // --- 11. RENDER MODALS ---
+  // --- 11. UI RENDERING ---
   window.renderMapModal = function() {
     const list = document.getElementById('engine-list');
     list.innerHTML = "";
@@ -518,8 +537,9 @@
     
     Object.keys(currentModeEngines).forEach(key => {
       const opt = document.createElement('div');
-      opt.className = `engine-opt ${state.activeEngine[state.mode] === key ? 'selected' : ''}`;
-      opt.innerText = currentModeEngines[key].name;
+      const isSelected = state.activeEngine[state.mode] === key;
+      opt.className = `engine-opt ${isSelected ? 'selected' : ''}`;
+      opt.innerHTML = `<span>${currentModeEngines[key].name}</span> ${isSelected ? '✓' : ''}`;
       opt.onclick = () => switchEngine(key);
       list.appendChild(opt);
     });
@@ -530,17 +550,19 @@
     el.innerHTML = state.saved.map((item, i) => `
       <div class="list-item">
         <div class="list-content"><strong>${item.addr}</strong><br><small>${item.coords}</small></div>
-        <button onclick="removeSaved(${i})" style="color:var(--danger); border:none; background:none; cursor:pointer;">✕</button>
+        <button onclick="removeSaved(${i})" style="color:var(--danger); border:none; background:none; cursor:pointer; font-size:18px;">✕</button>
       </div>
     `).join('');
   }
 
   window.renderHistoryList = function() {
     const el = document.getElementById('history-list');
-    // Group by Date could be done here, simple list for now
     el.innerHTML = state.history.map(item => `
       <div class="list-item">
-        <div class="list-content"><strong>${item.addr}</strong><br><span class="timestamp">${item.ts}</span></div>
+        <div class="list-content">
+            <strong>${item.addr}</strong>
+            <span class="timestamp">${item.date} at ${item.ts}</span>
+        </div>
       </div>
     `).join('');
   }
@@ -553,14 +575,15 @@
 
   window.exportList = function(type) {
     const source = type === 'saved' ? state.saved : state.history;
-    let txt = "REQUEST-INDY REPORT:\n\n";
+    let txt = "REQUEST-INDY EXPORT:\n\n";
     source.forEach((p, i) => txt += `${i+1}. ${p.addr}\n   ${p.coords}\n\n`);
     navigator.clipboard.writeText(txt).then(() => alert("Copied to clipboard!"));
   }
 
-  // --- 12. UTILS ---
+  // --- 12. UTILITY FUNCTIONS ---
   window.toggleDock = () => document.getElementById('bottom-sheet').classList.toggle('minimized');
   window.toggleMenu = () => document.getElementById('menu-modal').style.display = 'flex';
+  
   window.toggleMapModal = () => {
     document.getElementById('map-modal').style.display = 'flex';
     renderMapModal();
@@ -580,7 +603,7 @@
     document.getElementById('menu-modal').style.display = 'none';
   }
   
-  // Close buttons for all modals
+  // Close Modals
   document.querySelectorAll('.close-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.target.closest('.modal-overlay').style.display = 'none';
@@ -598,7 +621,7 @@
     document.getElementById('menu-modal').style.display = 'none';
   }
 
-  // External Links (No Popups)
+  // Sandbox Bypass Links
   window.openGoogle = () => {
     if(!state.lat) return alert("Select location");
     window.location.href = `https://www.google.com/maps/search/?api=1&query=${state.lat},${state.lng}`;
@@ -608,7 +631,7 @@
     window.location.href = `http://maps.apple.com/?q=${state.lat},${state.lng}`;
   }
 
-  // Autocomplete
+  // Autocomplete (Debounced)
   let typeTimer;
   window.handleTyping = function() {
     clearTimeout(typeTimer);
@@ -641,7 +664,7 @@
             });
           }
         });
-    }, 500);
+    }, 500); // 500ms Debounce
   }
 </script>
 </body>
