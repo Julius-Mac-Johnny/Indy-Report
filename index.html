@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Request-Indy V14</title>
+  <title>Request-Indy V15</title>
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -92,10 +92,9 @@
       pointer-events: auto; bottom: 0; left: 0; right: 0;
       border-radius: 25px 25px 0 0;
       padding: 0 20px max(30px, env(safe-area-inset-bottom)) 20px;
-      transition: transform 0.1s ease-out; /* Controlled by JS physics */
+      transition: transform 0.1s ease-out; /* JS Physics */
       transform: translateY(0);
     }
-    /* Minimized state handled by JS transform */
     
     @media (min-width: 768px) {
       .bottom-sheet { left: auto; right: 20px; bottom: 20px; width: 380px; border-radius: 25px; }
@@ -172,7 +171,7 @@
         <button id="tog-map" class="toggle-opt active" onclick="setMode('clean')">Map</button>
         <button id="tog-sat" class="toggle-opt" onclick="setMode('sat')">Sat</button>
       </div>
-      <button class="icon-btn" onclick="toggleModal('menu-modal')">☰</button>
+      <button class="icon-btn" onclick="toggleMenu()">☰</button>
     </div>
   </div>
 
@@ -243,6 +242,9 @@
     saved: JSON.parse(localStorage.getItem('ri_saved')) || []
   };
 
+  // Smart Navigation Logic
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
   const engines = {
     clean: { 
       voyager: { name: "Carto Voyager", url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png' },
@@ -299,16 +301,14 @@
     showToast("GPS Error - Tap Retry");
   });
 
-  // --- 5. GEOCODING & INTERACTION ---
+  // --- 5. GEOCODING (STRICT PARSING) ---
   map.on('click', (e) => {
     if (state.selectMarker) map.removeLayer(state.selectMarker);
     state.selectMarker = L.marker(e.latlng).addTo(map);
     if (state.tether) { map.removeLayer(state.tether); state.tether = null; }
     
-    // Auto-open sheet via transform reset
-    const sheet = document.getElementById('bottom-sheet');
-    sheet.style.transform = 'translateY(0px)';
-    
+    // Auto-open sheet
+    document.getElementById('bottom-sheet').classList.remove('minimized');
     processLocation(e.latlng);
   });
 
@@ -316,6 +316,7 @@
     updateUI("Processing...", "var(--sub)");
     state.lat = latlng.lat; state.lng = latlng.lng;
 
+    // 1. City Coords
     if (window.proj4) {
       try {
         const indy = proj4("EPSG:4326", "EPSG:2965", [latlng.lng, latlng.lat]);
@@ -323,20 +324,25 @@
       } catch(e) {}
     }
 
+    // 2. Fetch Address (Strict Zip Parsing)
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latlng.lat}&lon=${latlng.lng}&addressdetails=1`;
-    fetch(url, { headers: { 'User-Agent': 'Request-Indy-V14' } })
+    fetch(url, { headers: { 'User-Agent': 'Request-Indy-V15' } })
       .then(r => r.json())
       .then(d => {
         if(d.error) throw new Error();
         let a = d.address;
         let num = a.house_number;
-        let street = a.road || "Location";
+        let road = a.road || "Unnamed Location";
+        let city = a.city || a.town || "Indianapolis";
+        let zip = a.postcode || "";
         
         if(!num) {
-          state.address = `Near ${d.name || street} (Approx)`;
+          // Scenario B: Approx
+          state.address = `Near ${d.name || road}, ${city} ${zip} (Approx)`;
           if(d.lat) state.tether = L.polyline([latlng, [d.lat, d.lon]], {color: 'var(--red)', dashArray: '5,10'}).addTo(map);
         } else {
-          state.address = `${num} ${street}`;
+          // Scenario A: Exact
+          state.address = `${num} ${road}, ${city} ${zip}`;
         }
         updateUI();
         addToHistory();
@@ -363,7 +369,7 @@
     }
   }
 
-  // --- 6. SAVED POINTS (DUAL PERSISTENCE) ---
+  // --- 6. SAVED POINTS (PERSISTENCE) ---
   function renderSavedMarkers() {
     state.savedLayerGroup.clearLayers();
     state.saved.forEach(p => {
@@ -395,14 +401,8 @@
     renderSavedList();
   };
 
-  // --- 7. PHYSICS ENGINE (Bottom Sheet & Modals) ---
-  
-  // Sheet Logic
-  const sheet = document.getElementById('bottom-sheet');
-  const handle = document.getElementById('sheet-handle');
-  setupPhysics(handle, sheet, 'sheet');
-
-  // Modal Logic
+  // --- 7. PHYSICS ENGINE (Unified) ---
+  setupPhysics(document.getElementById('sheet-handle'), document.getElementById('bottom-sheet'), 'sheet');
   setupPhysics(document.getElementById('menu-handle'), document.getElementById('menu-modal'), 'modal');
   setupPhysics(document.getElementById('saved-handle'), document.getElementById('saved-modal'), 'modal');
   setupPhysics(document.getElementById('history-handle'), document.getElementById('history-modal'), 'modal');
@@ -411,31 +411,24 @@
   function setupPhysics(trigger, element, type) {
     if (!trigger || !element) return;
     let startY = 0, startX = 0, startTime = 0;
-    
-    // Initial Transform State tracking
     let currentY = 0, currentX = 0;
 
     const start = (y, x) => {
       startY = y; startX = x; startTime = Date.now();
       element.style.transition = 'none';
-      
-      // Get current transform if modal
       if(type === 'modal') {
          const style = window.getComputedStyle(element);
          const matrix = new WebKitCSSMatrix(style.transform);
-         currentY = matrix.m42;
-         currentX = matrix.m41;
+         currentY = matrix.m42; currentX = matrix.m41;
       }
     };
 
     const move = (y, x) => {
       const deltaY = y - startY;
       const deltaX = x - startX;
-      
       if (type === 'sheet') {
         if (deltaY > 0) element.style.transform = `translateY(${deltaY}px)`;
       } else {
-        // Free drag for modals
         element.style.transform = `translate(${currentX + deltaX}px, ${currentY + deltaY}px)`;
       }
     };
@@ -446,28 +439,15 @@
       element.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
 
       if (Math.abs(deltaY) < 10 && time < 250) {
-        // Click
-        if (type === 'sheet') {
-            // Toggle minimize logic via class, requires removing inline style
-            element.style.transform = ''; 
-            const isMin = element.classList.contains('minimized');
-            if(isMin) element.style.transform = 'translateY(0)';
-            else element.style.transform = 'translateY(calc(100% - 30px))';
-            element.classList.toggle('minimized');
-        }
+        if (type === 'sheet') element.classList.toggle('minimized');
+        element.style.transform = '';
         return;
       }
 
       if (type === 'sheet') {
-        if (deltaY > 50) { // Dragged down
-            element.style.transform = 'translateY(calc(100% - 30px))';
-            element.classList.add('minimized');
-        } else {
-            element.style.transform = 'translateY(0)';
-            element.classList.remove('minimized');
-        }
+        if (deltaY > 50) { element.style.transform = 'translateY(calc(100% - 30px))'; element.classList.add('minimized'); }
+        else { element.style.transform = 'translateY(0)'; element.classList.remove('minimized'); }
       }
-      // Modals just stay where dropped
     };
 
     trigger.addEventListener('touchstart', e => start(e.touches[0].clientY, e.touches[0].clientX), {passive:true});
@@ -483,43 +463,48 @@
     });
   }
 
-  // --- 8. SMART NAVIGATION ---
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  
-  window.smartNav = (type) => {
-    if(!state.lat) return showToast("Select location");
-    let url;
-    if(type === 'google') url = `https://www.google.com/maps/search/?api=1&query=${state.lat},${state.lng}`;
-    if(type === 'apple') url = `http://maps.apple.com/?q=${state.lat},${state.lng}`;
-    if(type === 'street') url = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint={state.lat},${state.lng}`; // Pano workaround for Street View
-    
-    if (isMobile) window.location.href = url;
-    else window.open(url, '_blank');
+  // --- 8. SMART MENU & HELPERS ---
+  window.toggleMenu = () => {
+    // Check if any modal is open
+    const openModal = Array.from(document.querySelectorAll('.modal')).find(m => m.style.display === 'flex');
+    if (openModal) {
+        // Global Reset: Close all
+        toggleModal('none');
+    } else {
+        // Open Main Menu
+        toggleModal('menu-modal');
+    }
   };
 
-  // --- 9. HELPERS & MODALS ---
   window.toggleModal = (id) => {
     document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
     const m = document.getElementById(id);
     if(m) {
         m.style.display = 'flex';
-        m.style.transform = 'translate(0,0)'; // Reset drag pos
-        // Desktop center reset
+        m.style.transform = 'translate(0,0)';
         if(window.innerWidth > 768) { m.style.top = '100px'; m.style.left = '20px'; }
-        
         if(id === 'saved-modal') renderSavedList();
         if(id === 'history-modal') renderHistoryList();
         if(id === 'map-select') renderMapList();
     }
   };
 
+  window.smartNav = (type) => {
+    if(!state.lat) return showToast("Select location");
+    let url;
+    if(type === 'google') url = `https://www.google.com/maps/search/?api=1&query=${state.lat},${state.lng}`;
+    if(type === 'street') url = `https://www.google.com/maps/search/?api=1&query=[Lat],[Lng]&layer=c&cbll=[Lat],[Lng]?layer=c&cbll=${state.lat},${state.lng}`; // Universal Street View
+    if(type === 'apple') url = `http://maps.apple.com/?q=${state.lat},${state.lng}`;
+    
+    if (isMobile) window.location.href = url;
+    else window.open(url, '_blank');
+  };
+
+  // Rendering
   function renderSavedList() {
     document.getElementById('saved-list').innerHTML = state.saved.map((p, i) => `
       <div class="list-item">
-        <div style="flex:1">
-          <strong>${p.addr}</strong><br>
-          <input type="text" class="note-input" value="${p.notes}" placeholder="Add note..." onchange="updateNote(${i}, this.value)">
-        </div>
+        <div style="flex:1"><strong>${p.addr}</strong><br><input type="text" class="note-input" value="${p.notes}" placeholder="Add note..." onchange="updateNote(${i}, this.value)"></div>
         <button onclick="deletePoint(${i})" style="color:var(--red); border:none; background:none; font-size:20px;">✕</button>
       </div>
     `).join('');
@@ -548,6 +533,7 @@
     });
   }
 
+  // --- 9. UTILS ---
   window.setMode = (m) => {
     state.mode = m;
     document.getElementById('tog-map').classList.toggle('active', m === 'clean');
@@ -581,14 +567,13 @@
     localStorage.setItem('ri_history', JSON.stringify(state.history));
   }
 
-  // --- 10. AUTOCOMPLETE ---
   let typeTimer;
   window.handleTyping = () => {
     clearTimeout(typeTimer);
     const q = document.getElementById('search-input').value;
     if(q.length < 3) return;
     typeTimer = setTimeout(() => {
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q+", Indianapolis")}`, {headers:{'User-Agent':'Request-Indy-V14'}})
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q+", Indianapolis")}&addressdetails=1`, {headers:{'User-Agent':'Request-Indy-V15'}})
         .then(r=>r.json()).then(data=>{
             const list = document.getElementById('autocomplete-results');
             list.innerHTML = ""; list.style.display = 'block';
@@ -597,9 +582,7 @@
                 d.innerText = i.display_name.split(',')[0];
                 d.onclick = () => {
                     map.setView([i.lat, i.lon], 18);
-                    const sheet = document.getElementById('bottom-sheet');
-                    sheet.classList.remove('minimized');
-                    sheet.style.transform = 'translateY(0)';
+                    document.getElementById('bottom-sheet').classList.remove('minimized');
                     processLocation({lat: i.lat, lng: i.lon});
                     list.style.display = 'none';
                 };
