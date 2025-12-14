@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Request-Indy V13</title>
+  <title>Request-Indy V14</title>
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -55,18 +55,15 @@
     .btn-gray { background: var(--input); color: var(--text); }
     .btn-outline { background: transparent; border: 1px solid var(--sub); color: var(--text); font-size: 13px; }
 
-    /* --- TOP BAR (Draggable) --- */
+    /* --- TOP BAR (STATIC) --- */
     .top-container {
       top: 0; left: 0; right: 0; display: flex; justify-content: center;
       padding-top: max(16px, env(safe-area-inset-top));
-      transition: transform 0.1s ease-out; /* Physics driven */
     }
     .top-bar {
-      height: auto; border-radius: 25px; padding: 10px; width: 94%; max-width: 600px;
-      display: flex; flex-direction: column; gap: 10px;
+      height: 50px; border-radius: 25px; padding: 0 6px; width: 94%; max-width: 600px;
+      display: flex; align-items: center; gap: 8px;
     }
-    .top-row { display: flex; align-items: center; gap: 8px; width: 100%; }
-    
     .btn-find {
       background: var(--blue); color: white; border: none; height: 36px; padding: 0 16px; 
       border-radius: 18px; font-size: 13px; font-weight: 600; cursor: pointer;
@@ -78,8 +75,6 @@
     #search-input {
       flex: 1; height: 100%; border: none; background: transparent; font-size: 16px; outline: none;
     }
-    
-    /* Toggle Pill */
     .toggle-pill {
       background: var(--input); border-radius: 18px; padding: 2px; display: flex; height: 36px;
     }
@@ -88,29 +83,28 @@
       font-size: 12px; font-weight: 600; color: var(--sub); cursor: pointer;
     }
     .toggle-opt.active { background: white; color: var(--text); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-
-    /* Handle */
-    .drag-handle {
-      width: 100%; height: 20px; display: flex; align-items: center; justify-content: center; cursor: grab;
+    .icon-btn {
+      background: transparent; border: none; font-size: 20px; cursor: pointer; padding: 0 8px; color: var(--blue); pointer-events: auto;
     }
-    .handle-pill { width: 40px; height: 5px; background: var(--handle); border-radius: 3px; }
 
-    /* Compact States */
-    .top-container.compact { transform: translateY(-75px); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
-    .bottom-sheet.minimized { transform: translateY(calc(100% - 30px)); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
-
-    /* --- BOTTOM SHEET --- */
+    /* --- BOTTOM SHEET (PHYSICS DRAG) --- */
     .bottom-sheet {
       pointer-events: auto; bottom: 0; left: 0; right: 0;
       border-radius: 25px 25px 0 0;
       padding: 0 20px max(30px, env(safe-area-inset-bottom)) 20px;
-      transition: transform 0.1s ease-out; /* Physics driven */
+      transition: transform 0.1s ease-out; /* Controlled by JS physics */
+      transform: translateY(0);
     }
+    /* Minimized state handled by JS transform */
     
     @media (min-width: 768px) {
       .bottom-sheet { left: auto; right: 20px; bottom: 20px; width: 380px; border-radius: 25px; }
-      .bottom-sheet.minimized { transform: translateY(calc(100% - 40px)); }
     }
+
+    .handle-area {
+      width: 100%; height: 30px; display: flex; align-items: center; justify-content: center; cursor: grab;
+    }
+    .handle-bar { width: 40px; height: 5px; background: var(--handle); border-radius: 3px; }
 
     .info-display { text-align: center; margin-bottom: 15px; }
     .label-micro { font-size: 10px; font-weight: 700; color: var(--sub); text-transform: uppercase; margin-bottom: 4px; }
@@ -124,14 +118,14 @@
     }
     input[type=range] { width: 30%; accent-color: var(--red); }
 
-    /* --- MODALS --- */
+    /* --- MODALS (DRAGGABLE) --- */
     .modal {
       top: 100px; left: 20px; width: calc(100% - 40px); max-width: 500px;
       padding: 0 0 20px 0; border-radius: 25px; display: none; flex-direction: column; max-height: 60vh;
     }
     .modal-header {
       padding: 15px; background: rgba(0,0,0,0.03); border-bottom: var(--border);
-      border-radius: 25px 25px 0 0; display: flex; justify-content: space-between; align-items: center;
+      border-radius: 25px 25px 0 0; display: flex; justify-content: space-between; align-items: center; cursor: grab;
     }
     .modal-body { padding: 15px; overflow-y: auto; }
     
@@ -145,7 +139,7 @@
     }
 
     /* --- TOAST --- */
-    #toast-container { top: 120px; left: 50%; transform: translateX(-50%); width: auto; text-align: center; }
+    #toast-container { top: 100px; left: 50%; transform: translateX(-50%); width: auto; text-align: center; }
     .toast {
       background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); color: black;
       padding: 10px 20px; border-radius: 20px; margin-bottom: 10px; font-size: 14px; font-weight: 600;
@@ -155,7 +149,7 @@
 
     /* --- AUTOCOMPLETE --- */
     #autocomplete-results {
-      top: 90px; left: 20px; right: 20px; max-width: 600px; margin: 0 auto;
+      top: 80px; left: 20px; right: 20px; max-width: 600px; margin: 0 auto;
       border-radius: 20px; max-height: 250px; overflow-y: auto; display: none; pointer-events: auto;
     }
     .ac-item { padding: 14px; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 14px; cursor: pointer; }
@@ -168,35 +162,38 @@
 
   <div id="toast-container" class="toast-layer"></div>
 
-  <div class="top-container ui-layer" id="top-sheet">
+  <div class="top-container ui-layer">
     <div class="top-bar glass">
-      <div class="top-row">
-        <button class="btn-find" onclick="handleFindMe()">Find Me</button>
-        <div class="search-wrap">
-          <input type="text" id="search-input" placeholder="Search..." oninput="handleTyping()">
-        </div>
-        <div class="toggle-pill">
-          <button id="tog-map" class="toggle-opt active" onclick="setMode('clean')">Map</button>
-          <button id="tog-sat" class="toggle-opt" onclick="setMode('sat')">Sat</button>
-        </div>
-        <button class="toggle-opt" onclick="toggleModal('menu-modal')" style="font-size:18px">☰</button>
+      <button class="btn-find" onclick="handleFindMe()">Find Me</button>
+      <div class="search-wrap">
+        <input type="text" id="search-input" placeholder="Search..." oninput="handleTyping()">
       </div>
-      <div class="drag-handle" id="top-handle"><div class="handle-pill"></div></div>
+      <div class="toggle-pill">
+        <button id="tog-map" class="toggle-opt active" onclick="setMode('clean')">Map</button>
+        <button id="tog-sat" class="toggle-opt" onclick="setMode('sat')">Sat</button>
+      </div>
+      <button class="icon-btn" onclick="toggleModal('menu-modal')">☰</button>
     </div>
   </div>
 
   <div id="autocomplete-results" class="autocomplete-layer glass"></div>
 
   <div id="menu-modal" class="modal modal-layer glass">
-    <div class="modal-header"><h3>Menu</h3><button class="btn-outline" onclick="toggleModal('menu-modal')">✕</button></div>
+    <div class="modal-header" id="menu-handle"><h3>Menu</h3><button class="btn-outline" onclick="toggleModal('menu-modal')">✕</button></div>
     <div class="modal-body">
+      <button class="btn btn-gray" onclick="toggleModal('map-select')" style="width:100%; margin-bottom:10px">Map Style</button>
       <button class="btn btn-gray" onclick="toggleModal('saved-modal')" style="width:100%; margin-bottom:10px">Saved Points</button>
       <button class="btn btn-gray" onclick="toggleModal('history-modal')" style="width:100%">History</button>
     </div>
   </div>
 
+  <div id="map-select" class="modal modal-layer glass">
+    <div class="modal-header" id="map-handle"><h3>Map Style</h3><button class="btn-outline" onclick="toggleModal('map-select')">✕</button></div>
+    <div class="modal-body" id="map-list"></div>
+  </div>
+
   <div id="saved-modal" class="modal modal-layer glass">
-    <div class="modal-header"><h3>Saved</h3><button class="btn-outline" onclick="toggleModal('saved-modal')">✕</button></div>
+    <div class="modal-header" id="saved-handle"><h3>Saved</h3><button class="btn-outline" onclick="toggleModal('saved-modal')">✕</button></div>
     <div class="modal-body">
       <div id="saved-list"></div>
       <button class="btn btn-blue" onclick="exportList()" style="width:100%; margin-top:10px">Copy List</button>
@@ -204,14 +201,14 @@
   </div>
 
   <div id="history-modal" class="modal modal-layer glass">
-    <div class="modal-header"><h3>History</h3><button class="btn-outline" onclick="toggleModal('history-modal')">✕</button></div>
+    <div class="modal-header" id="history-handle"><h3>History</h3><button class="btn-outline" onclick="toggleModal('history-modal')">✕</button></div>
     <div class="modal-body" id="history-list"></div>
   </div>
 
   <div id="map"></div>
 
   <div class="bottom-sheet ui-layer glass" id="bottom-sheet">
-    <div class="drag-handle" id="bottom-handle"><div class="handle-pill"></div></div>
+    <div class="handle-area" id="sheet-handle"><div class="handle-bar"></div></div>
 
     <div class="info-display">
       <span class="label-micro" id="data-label">Standard Address</span>
@@ -220,19 +217,19 @@
 
     <div class="btn-grid">
       <button class="btn btn-blue" onclick="savePoint()">Save Point</button>
-      <button class="btn btn-gray" onclick="smartCopy()">Copy Location</button>
+      <button class="btn btn-gray" onclick="smartCopy()">Copy Current Location</button>
     </div>
 
     <div class="btn-grid">
-      <button class="btn btn-outline" onclick="openExt('google')">Google Maps</button>
-      <button class="btn btn-outline" onclick="openExt('street')">Street View</button>
+      <button class="btn btn-outline" onclick="smartNav('google')">Google Maps</button>
+      <button class="btn btn-outline" onclick="smartNav('street')">Street View</button>
     </div>
-    <button class="btn btn-outline" onclick="openExt('apple')" style="width:100%; margin-bottom:10px">Apple Maps</button>
+    <button class="btn btn-outline" onclick="smartNav('apple')" style="width:100%; margin-bottom:10px">Apple Maps</button>
 
     <div class="slider-row">
-      <span class="label-micro" style="color:black">Consumer</span>
+      <span class="label-micro" style="color:black">Clean</span>
       <input type="range" min="0" max="1" step="0.1" value="0" id="gridSlider">
-      <span class="label-micro" style="color:var(--red)">Bureaucracy</span>
+      <span class="label-micro" style="color:var(--red)">Grid</span>
     </div>
   </div>
 
@@ -247,23 +244,26 @@
   };
 
   const engines = {
-    clean: { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png' },
-    sat: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' }
+    clean: { 
+      voyager: { name: "Carto Voyager", url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png' },
+      osm: { name: "OpenStreetMap", url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' },
+      esri: { name: "Esri Navigation", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}' }
+    },
+    sat: {
+      esri: { name: "Esri Satellite", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' }
+    }
   };
 
-  // --- 2. MAP CONFIG ---
+  // --- 2. MAP SETUP ---
   const map = L.map('map', { zoomControl: false, tap: true }).setView([39.7684, -86.1581], 12);
-  let baseLayer = L.tileLayer(engines.clean.url, { maxZoom: 19 }).addTo(map);
+  let baseLayer = L.tileLayer(engines.clean.voyager.url, { maxZoom: 19 }).addTo(map);
   
-  // Overlays
   const cityUrl = 'https://xmaps.indy.gov/arcgis/rest/services/SalesForce/MAC311/MapServer';
   L.esri.dynamicMapLayer({ url: cityUrl, layers: [18], opacity: 0.9, f: 'json', useCors: false }).addTo(map);
   const layerGrid = L.esri.dynamicMapLayer({ url: cityUrl, layers: [16], opacity: 0, f: 'json', useCors: false }).addTo(map);
   
-  // Persistent Saved Markers Layer
   state.savedLayerGroup = L.layerGroup().addTo(map);
 
-  // Proj4 Setup
   if(window.proj4) proj4.defs("EPSG:2965", "+proj=tmerc +lat_0=37.5 +lon_0=-85.66666666666667 +k=0.9999666666666667 +x_0=2960000 +y_0=250000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=us-ft +no_defs");
 
   // --- 3. LIFECYCLE ---
@@ -272,10 +272,9 @@
     renderSavedMarkers();
   });
 
-  // --- 4. GPS LOGIC (FAST LOCK) ---
+  // --- 4. GPS LOGIC (ROBUST) ---
   function initLocate() {
     map.locate({ setView: true, maxZoom: 15, enableHighAccuracy: false });
-    // Silent upgrade
     setTimeout(() => {
       map.locate({ setView: false, enableHighAccuracy: true });
     }, 2000);
@@ -292,7 +291,6 @@
     state.userMarker = L.circleMarker(e.latlng, {
       radius: 8, fillColor: '#007AFF', color: 'white', weight: 2, fillOpacity: 1
     }).addTo(map);
-    // Pulse
     L.circle(e.latlng, { radius: e.accuracy/2, color: '#007AFF', fillOpacity: 0.1, weight: 0 }).addTo(map);
   });
 
@@ -301,14 +299,16 @@
     showToast("GPS Error - Tap Retry");
   });
 
-  // --- 5. INTERACTION & GEOCODING ---
+  // --- 5. GEOCODING & INTERACTION ---
   map.on('click', (e) => {
     if (state.selectMarker) map.removeLayer(state.selectMarker);
     state.selectMarker = L.marker(e.latlng).addTo(map);
     if (state.tether) { map.removeLayer(state.tether); state.tether = null; }
     
-    // Auto-open sheet if minimized
-    document.getElementById('bottom-sheet').classList.remove('minimized');
+    // Auto-open sheet via transform reset
+    const sheet = document.getElementById('bottom-sheet');
+    sheet.style.transform = 'translateY(0px)';
+    
     processLocation(e.latlng);
   });
 
@@ -316,7 +316,6 @@
     updateUI("Processing...", "var(--sub)");
     state.lat = latlng.lat; state.lng = latlng.lng;
 
-    // 1. City Coords
     if (window.proj4) {
       try {
         const indy = proj4("EPSG:4326", "EPSG:2965", [latlng.lng, latlng.lat]);
@@ -324,9 +323,8 @@
       } catch(e) {}
     }
 
-    // 2. Nearest Address
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latlng.lat}&lon=${latlng.lng}&addressdetails=1`;
-    fetch(url, { headers: { 'User-Agent': 'Request-Indy-V13' } })
+    fetch(url, { headers: { 'User-Agent': 'Request-Indy-V14' } })
       .then(r => r.json())
       .then(d => {
         if(d.error) throw new Error();
@@ -336,7 +334,6 @@
         
         if(!num) {
           state.address = `Near ${d.name || street} (Approx)`;
-          // Tether Visual
           if(d.lat) state.tether = L.polyline([latlng, [d.lat, d.lon]], {color: 'var(--red)', dashArray: '5,10'}).addTo(map);
         } else {
           state.address = `${num} ${street}`;
@@ -366,12 +363,12 @@
     }
   }
 
-  // --- 6. SAVED POINTS LOGIC ---
+  // --- 6. SAVED POINTS (DUAL PERSISTENCE) ---
   function renderSavedMarkers() {
     state.savedLayerGroup.clearLayers();
     state.saved.forEach(p => {
       L.circleMarker([p.lat, p.lng], { radius: 6, color: 'white', fillColor: 'var(--green)', fillOpacity: 1, weight: 2 })
-       .bindPopup(`<b>${p.addr}</b><br>${p.notes ? 'Note: '+p.notes : ''}`)
+       .bindPopup(`<b>${p.addr}</b><br>${p.notes || ''}`)
        .addTo(state.savedLayerGroup);
     });
   }
@@ -388,7 +385,7 @@
   window.updateNote = (index, val) => {
     state.saved[index].notes = val;
     localStorage.setItem('ri_saved', JSON.stringify(state.saved));
-    renderSavedMarkers(); // Re-render to update popups
+    renderSavedMarkers();
   };
 
   window.deletePoint = (index) => {
@@ -398,81 +395,121 @@
     renderSavedList();
   };
 
-  // --- 7. PHYSICS ENGINE (Unified) ---
-  setupPhysics('top-handle', 'top-sheet', 'up');
-  setupPhysics('bottom-handle', 'bottom-sheet', 'down');
+  // --- 7. PHYSICS ENGINE (Bottom Sheet & Modals) ---
+  
+  // Sheet Logic
+  const sheet = document.getElementById('bottom-sheet');
+  const handle = document.getElementById('sheet-handle');
+  setupPhysics(handle, sheet, 'sheet');
 
-  function setupPhysics(handleId, elementId, direction) {
-    const handle = document.getElementById(handleId);
-    const el = document.getElementById(elementId);
-    let startY = 0, startTime = 0;
+  // Modal Logic
+  setupPhysics(document.getElementById('menu-handle'), document.getElementById('menu-modal'), 'modal');
+  setupPhysics(document.getElementById('saved-handle'), document.getElementById('saved-modal'), 'modal');
+  setupPhysics(document.getElementById('history-handle'), document.getElementById('history-modal'), 'modal');
+  setupPhysics(document.getElementById('map-handle'), document.getElementById('map-select'), 'modal');
 
-    const start = (y) => {
-      startY = y; startTime = Date.now();
-      el.style.transition = 'none'; // Follow finger instantly
+  function setupPhysics(trigger, element, type) {
+    if (!trigger || !element) return;
+    let startY = 0, startX = 0, startTime = 0;
+    
+    // Initial Transform State tracking
+    let currentY = 0, currentX = 0;
+
+    const start = (y, x) => {
+      startY = y; startX = x; startTime = Date.now();
+      element.style.transition = 'none';
+      
+      // Get current transform if modal
+      if(type === 'modal') {
+         const style = window.getComputedStyle(element);
+         const matrix = new WebKitCSSMatrix(style.transform);
+         currentY = matrix.m42;
+         currentX = matrix.m41;
+      }
     };
 
-    const move = (y) => {
-      const delta = y - startY;
-      // Constraint: Only allow drag in minimize direction
-      if (direction === 'down' && delta < 0) return; // Bottom sheet moving up is rigid
-      if (direction === 'up' && delta > 0) return; // Top sheet moving down is rigid
+    const move = (y, x) => {
+      const deltaY = y - startY;
+      const deltaX = x - startX;
       
-      // Visual feedback
-      el.style.transform = `translateY(${delta}px)`;
+      if (type === 'sheet') {
+        if (deltaY > 0) element.style.transform = `translateY(${deltaY}px)`;
+      } else {
+        // Free drag for modals
+        element.style.transform = `translate(${currentX + deltaX}px, ${currentY + deltaY}px)`;
+      }
     };
 
     const end = (y) => {
-      const delta = y - startY;
+      const deltaY = y - startY;
       const time = Date.now() - startTime;
-      el.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
-      el.style.transform = '';
+      element.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
 
-      // Click (Tap) Detection
-      if (Math.abs(delta) < 10 && time < 250) {
-        if (direction === 'up') el.classList.toggle('compact');
-        else el.classList.toggle('minimized');
+      if (Math.abs(deltaY) < 10 && time < 250) {
+        // Click
+        if (type === 'sheet') {
+            // Toggle minimize logic via class, requires removing inline style
+            element.style.transform = ''; 
+            const isMin = element.classList.contains('minimized');
+            if(isMin) element.style.transform = 'translateY(0)';
+            else element.style.transform = 'translateY(calc(100% - 30px))';
+            element.classList.toggle('minimized');
+        }
         return;
       }
 
-      // Drag Snap Logic
-      const threshold = 50;
-      if (direction === 'down') {
-        if (delta > threshold) el.classList.add('minimized');
-        else el.classList.remove('minimized');
-      } else {
-        if (delta < -threshold) el.classList.add('compact');
-        else el.classList.remove('compact');
+      if (type === 'sheet') {
+        if (deltaY > 50) { // Dragged down
+            element.style.transform = 'translateY(calc(100% - 30px))';
+            element.classList.add('minimized');
+        } else {
+            element.style.transform = 'translateY(0)';
+            element.classList.remove('minimized');
+        }
       }
+      // Modals just stay where dropped
     };
 
-    // Touch
-    handle.addEventListener('touchstart', e => start(e.touches[0].clientY), {passive:true});
-    handle.addEventListener('touchmove', e => move(e.touches[0].clientY), {passive:true});
-    handle.addEventListener('touchend', e => end(e.changedTouches[0].clientY));
+    trigger.addEventListener('touchstart', e => start(e.touches[0].clientY, e.touches[0].clientX), {passive:true});
+    trigger.addEventListener('touchmove', e => move(e.touches[0].clientY, e.touches[0].clientX), {passive:true});
+    trigger.addEventListener('touchend', e => end(e.changedTouches[0].clientY));
     
-    // Mouse
-    handle.addEventListener('mousedown', e => {
-      start(e.clientY);
-      const moveHandler = (ev) => move(ev.clientY);
-      const endHandler = (ev) => {
-        end(ev.clientY);
-        document.removeEventListener('mousemove', moveHandler);
-        document.removeEventListener('mouseup', endHandler);
-      };
-      document.addEventListener('mousemove', moveHandler);
-      document.addEventListener('mouseup', endHandler);
+    trigger.addEventListener('mousedown', e => {
+        start(e.clientY, e.clientX);
+        const moveFn = ev => move(ev.clientY, ev.clientX);
+        const endFn = ev => { end(ev.clientY); document.removeEventListener('mousemove', moveFn); document.removeEventListener('mouseup', endFn); };
+        document.addEventListener('mousemove', moveFn);
+        document.addEventListener('mouseup', endFn);
     });
   }
 
-  // --- 8. UI HELPERS ---
+  // --- 8. SMART NAVIGATION ---
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  
+  window.smartNav = (type) => {
+    if(!state.lat) return showToast("Select location");
+    let url;
+    if(type === 'google') url = `https://www.google.com/maps/search/?api=1&query=${state.lat},${state.lng}`;
+    if(type === 'apple') url = `http://maps.apple.com/?q=${state.lat},${state.lng}`;
+    if(type === 'street') url = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint={state.lat},${state.lng}`; // Pano workaround for Street View
+    
+    if (isMobile) window.location.href = url;
+    else window.open(url, '_blank');
+  };
+
+  // --- 9. HELPERS & MODALS ---
   window.toggleModal = (id) => {
     document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
     const m = document.getElementById(id);
     if(m) {
-      m.style.display = 'flex';
-      if(id === 'saved-modal') renderSavedList();
-      if(id === 'history-modal') renderHistoryList();
+        m.style.display = 'flex';
+        m.style.transform = 'translate(0,0)'; // Reset drag pos
+        // Desktop center reset
+        if(window.innerWidth > 768) { m.style.top = '100px'; m.style.left = '20px'; }
+        
+        if(id === 'saved-modal') renderSavedList();
+        if(id === 'history-modal') renderHistoryList();
+        if(id === 'map-select') renderMapList();
     }
   };
 
@@ -494,12 +531,29 @@
     `).join('');
   }
 
+  function renderMapList() {
+    const list = document.getElementById('map-list');
+    list.innerHTML = "";
+    Object.keys(engines.clean).forEach(k => {
+        const d = document.createElement('div');
+        d.className = 'list-item';
+        d.innerHTML = `<strong>${engines.clean[k].name}</strong>`;
+        d.onclick = () => {
+            if(baseLayer) map.removeLayer(baseLayer);
+            baseLayer = L.tileLayer(engines.clean[k].url, {maxZoom:19}).addTo(map);
+            baseLayer.bringToBack();
+            toggleModal('map-select');
+        };
+        list.appendChild(d);
+    });
+  }
+
   window.setMode = (m) => {
     state.mode = m;
     document.getElementById('tog-map').classList.toggle('active', m === 'clean');
     document.getElementById('tog-sat').classList.toggle('active', m === 'sat');
     if(baseLayer) map.removeLayer(baseLayer);
-    baseLayer = L.tileLayer(m === 'clean' ? engines.clean.url : engines.sat.url, {maxZoom: 19}).addTo(map);
+    baseLayer = L.tileLayer(m === 'clean' ? engines.clean.voyager.url : engines.sat.esri.url, {maxZoom: 19}).addTo(map);
     baseLayer.bringToBack();
   };
 
@@ -512,15 +566,6 @@
   window.smartCopy = () => {
     const txt = state.gridOpacity > 0.1 ? `${state.address} [${state.cityCoords}]` : state.address;
     navigator.clipboard.writeText(txt).then(() => showToast("Copied!"));
-  };
-
-  window.openExt = (type) => {
-    if(!state.lat) return showToast("Select location");
-    let url = "";
-    if(type === 'google') url = `https://www.google.com/maps/search/?api=1&query=${state.lat},${state.lng}`;
-    if(type === 'street') url = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint={state.lat},${state.lng}`;
-    if(type === 'apple') url = `http://maps.apple.com/?q=${state.lat},${state.lng}`;
-    window.location.href = url;
   };
 
   function showToast(msg) {
@@ -536,14 +581,14 @@
     localStorage.setItem('ri_history', JSON.stringify(state.history));
   }
 
-  // --- 9. AUTOCOMPLETE ---
+  // --- 10. AUTOCOMPLETE ---
   let typeTimer;
   window.handleTyping = () => {
     clearTimeout(typeTimer);
     const q = document.getElementById('search-input').value;
     if(q.length < 3) return;
     typeTimer = setTimeout(() => {
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q+", Indianapolis")}`, {headers:{'User-Agent':'Request-Indy-V13'}})
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q+", Indianapolis")}`, {headers:{'User-Agent':'Request-Indy-V14'}})
         .then(r=>r.json()).then(data=>{
             const list = document.getElementById('autocomplete-results');
             list.innerHTML = ""; list.style.display = 'block';
@@ -552,7 +597,9 @@
                 d.innerText = i.display_name.split(',')[0];
                 d.onclick = () => {
                     map.setView([i.lat, i.lon], 18);
-                    document.getElementById('bottom-sheet').classList.remove('minimized');
+                    const sheet = document.getElementById('bottom-sheet');
+                    sheet.classList.remove('minimized');
+                    sheet.style.transform = 'translateY(0)';
                     processLocation({lat: i.lat, lng: i.lon});
                     list.style.display = 'none';
                 };
