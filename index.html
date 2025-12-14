@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Request-Indy V4</title>
+  <title>Request-Indy V5</title>
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -11,58 +11,42 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
 
   <style>
-    /* --- 2. THEME ENGINE & CSS VARIABLES --- */
+    /* --- 2. CSS VARIABLES (Apple Aesthetic Only) --- */
     :root {
-      /* APPLE MAPS AESTHETIC (Default) */
-      --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+      --font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
       --bg-color: #F2F2F7;
-      --card-bg: rgba(255, 255, 255, 0.85);
-      --card-blur: blur(20px);
+      --card-bg: rgba(255, 255, 255, 0.85); /* Glassmorphism */
+      --card-blur: blur(25px);
       --text-main: #000000;
       --text-sub: #8E8E93;
       --primary: #007AFF; 
       --danger: #FF3B30;  
-      --success: #34C759;
-      --radius: 20px;
+      --success: #34C759; 
+      --radius: 18px;
       --shadow: 0 8px 32px rgba(0,0,0,0.12);
       --border: 0.5px solid rgba(0,0,0,0.1);
       --input-bg: rgba(118, 118, 128, 0.12);
-      --handle: #D1D1D6;
-    }
-
-    /* GOOGLE MAPS AESTHETIC */
-    body.google-theme {
-      --font: 'Roboto', Arial, sans-serif;
-      --bg-color: #FFFFFF;
-      --card-bg: #FFFFFF;
-      --card-blur: none;
-      --text-main: #202124;
-      --text-sub: #5F6368;
-      --primary: #1A73E8; 
-      --danger: #D93025;  
-      --success: #1E8E3E; 
-      --radius: 8px;      
-      --shadow: 0 2px 6px rgba(0,0,0,0.3);
-      --border: none;
-      --input-bg: #F1F3F4;
-      --handle: #DADCE0;
+      --handle: #C7C7CC;
     }
 
     /* --- 3. GLOBAL RESET --- */
     body, html { 
       height: 100%; width: 100%; margin: 0; padding: 0; 
-      overflow: hidden; font-family: var(--font); 
+      overflow: hidden; font-family: var(--font-stack); 
       background: var(--bg-color); color: var(--text-main);
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Z-INDEX STRATEGY: Map=0, UI=1000, Modals=2000, Autocomplete=3000 */
+    /* Z-INDEX STRATEGY */
     #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 0; }
+    .ui-layer { z-index: 1000; position: absolute; } /* Floating UI */
+    .modal-layer { z-index: 2000; position: absolute; } /* Draggable Windows */
+    .toast-layer { z-index: 3000; position: fixed; } /* Notifications */
+    .autocomplete-layer { z-index: 3000; position: absolute; }
 
-    /* --- 4. TOP FLOATING BAR --- */
+    /* --- 4. TOP BAR --- */
     .top-bar-container {
-      position: absolute; top: 16px; left: 0; right: 0;
-      display: flex; justify-content: center; pointer-events: none; z-index: 1000;
+      top: 16px; left: 0; right: 0; pointer-events: none; display: flex; justify-content: center;
     }
     
     .top-bar {
@@ -71,25 +55,32 @@
       border: var(--border); box-shadow: var(--shadow);
       height: 50px; border-radius: 25px;
       display: flex; align-items: center; padding: 0 6px; gap: 8px;
-      width: 90%; max-width: 600px; transition: all 0.3s ease;
+      width: 90%; max-width: 600px;
     }
 
-    /* Find Me Button */
     .btn-find {
       background: var(--primary); color: white; border: none;
       height: 36px; padding: 0 16px; border-radius: 18px;
       font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
     }
-    .btn-find:active { opacity: 0.8; }
     
-    /* Search Input */
+    .search-wrapper {
+      flex: 1; height: 36px; background: var(--input-bg); border-radius: 10px;
+      display: flex; align-items: center; padding: 0 8px; position: relative;
+    }
+    
     #search-input {
       flex: 1; height: 100%; border: none; background: transparent;
-      font-family: var(--font); font-size: 16px; outline: none;
-      color: var(--text-main); min-width: 0;
+      font-family: var(--font-stack); font-size: 16px; outline: none; min-width: 0;
     }
 
-    /* Toggle Switch (Map/Sat) */
+    .search-clear {
+      display: none; background: #8E8E93; color: white; border-radius: 50%;
+      width: 16px; height: 16px; font-size: 10px; border: none;
+      align-items: center; justify-content: center; cursor: pointer;
+    }
+
+    /* Toggle Pills (Shared Style) */
     .toggle-pill {
       background: var(--input-bg); border-radius: 18px; padding: 2px;
       display: flex; height: 36px; flex-shrink: 0;
@@ -102,42 +93,34 @@
       background: var(--card-bg); color: var(--text-main);
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    
-    /* Menu Icon Button */
+
     .icon-btn {
-      background: transparent; border: none; font-size: 20px; cursor: pointer; padding: 0 8px;
-      color: var(--primary); font-weight: bold;
+      background: transparent; border: none; font-size: 20px; cursor: pointer; padding: 0 8px; color: var(--primary);
     }
 
     /* --- 5. BOTTOM SHEET --- */
     .bottom-sheet {
-      position: absolute; bottom: 0; left: 0; right: 0;
+      bottom: 0; left: 0; right: 0;
       background: var(--card-bg); backdrop-filter: var(--card-blur);
       border-top: var(--border); border-radius: var(--radius) var(--radius) 0 0;
-      box-shadow: var(--shadow); z-index: 1000;
+      box-shadow: var(--shadow);
       padding: 0 20px 30px 20px;
       transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
       transform: translateY(0);
     }
-    .bottom-sheet.minimized {
-      transform: translateY(calc(100% - 30px));
-    }
-    
-    /* Desktop Adjustment */
+    .bottom-sheet.minimized { transform: translateY(calc(100% - 30px)); }
+
+    /* Desktop constraint */
     @media (min-width: 768px) {
       .bottom-sheet { left: auto; right: 20px; bottom: 20px; width: 400px; border-radius: var(--radius); }
       .bottom-sheet.minimized { transform: translateY(calc(100% - 40px)); }
     }
 
-    /* Drag Handle */
     .handle-area {
       width: 100%; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer;
     }
-    .handle-bar {
-      width: 40px; height: 5px; background: var(--handle); border-radius: 3px;
-    }
+    .handle-bar { width: 40px; height: 5px; background: var(--handle); border-radius: 3px; }
 
-    /* Info Display */
     .info-display { text-align: center; margin-bottom: 20px; }
     .label-micro {
       font-size: 10px; font-weight: 700; color: var(--text-sub); 
@@ -148,132 +131,161 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
 
-    /* Buttons */
     .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-    
-    /* Special Grid for Google/StreetView */
     .btn-grid-triple { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
 
     .btn {
-      height: 48px; border: none; border-radius: 12px; font-weight: 600; font-size: 15px; cursor: pointer;
-      font-family: var(--font); display: flex; align-items: center; justify-content: center;
+      height: 44px; border: none; border-radius: 12px; font-weight: 600; font-size: 15px; cursor: pointer;
+      font-family: var(--font-stack); display: flex; align-items: center; justify-content: center;
     }
     .btn-save { background: var(--success); color: white; }
     .btn-copy { background: var(--input-bg); color: var(--text-main); }
-    .btn-verify { 
-      background: transparent; border: 1px solid var(--text-sub); color: var(--text-main); font-size: 13px;
-    }
-    .btn-select {
-      width: 100%; background: var(--input-bg); color: var(--primary); margin-bottom: 15px; font-size: 14px;
-    }
+    .btn-verify { background: transparent; border: 1px solid var(--text-sub); color: var(--text-main); font-size: 13px; }
+    .btn-select { width: 100%; background: var(--input-bg); color: var(--primary); margin-bottom: 15px; font-size: 14px; }
 
-    /* Slider */
-    .slider-container {
-      background: var(--input-bg); padding: 12px 16px; border-radius: 12px;
-      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    /* The Grid Toggle (Replaces Slider) */
+    .grid-control-row {
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--input-bg); padding: 8px 16px; border-radius: 14px; margin-top: 5px;
     }
-    input[type=range] { flex: 1; accent-color: var(--danger); }
-    .slider-lbl { font-size: 11px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; }
+    .grid-label { font-size: 12px; font-weight: 600; color: var(--text-sub); }
 
-    /* --- 6. MODALS --- */
-    .modal-overlay {
-      position: absolute; top: 80px; left: 15px; right: 15px; max-width: 600px; margin: 0 auto;
+    /* --- 6. DRAGGABLE MODALS --- */
+    .modal {
+      top: 100px; left: 20px; width: calc(100% - 40px); max-width: 500px;
       background: var(--card-bg); backdrop-filter: var(--card-blur);
-      padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow);
-      z-index: 2000; display: none; flex-direction: column;
-      max-height: 70vh; overflow-y: auto; border: var(--border);
+      padding: 0 0 20px 0; border-radius: var(--radius); box-shadow: var(--shadow);
+      display: none; flex-direction: column; border: var(--border);
+      max-height: 60vh;
     }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-    .modal-title { margin: 0; font-size: 18px; font-weight: 700; }
+    
+    .modal-header {
+      padding: 15px; background: rgba(0,0,0,0.03); border-bottom: var(--border);
+      cursor: grab; border-radius: var(--radius) var(--radius) 0 0;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-header:active { cursor: grabbing; }
+    .modal-title { margin: 0; font-size: 16px; font-weight: 700; }
     .close-btn { border: none; background: none; font-size: 24px; color: var(--text-sub); cursor: pointer; }
+    .modal-body { padding: 15px; overflow-y: auto; }
 
-    /* Lists */
+    @media (max-width: 768px) {
+      /* Mobile: Snap to bottom, disable drag */
+      .modal { top: auto !important; bottom: 20px !important; left: 10px !important; width: calc(100% - 20px) !important; transform: none !important; }
+      .modal-header { cursor: default; }
+    }
+
+    /* --- 7. TOAST NOTIFICATIONS --- */
+    #toast-container {
+      top: 20px; left: 50%; transform: translateX(-50%); width: auto; text-align: center;
+    }
+    .toast {
+      background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px);
+      color: white; padding: 10px 20px; border-radius: 20px;
+      margin-bottom: 10px; font-size: 14px; font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      animation: slideDown 0.3s ease-out, fadeOut 0.5s ease-out 2.5s forwards;
+    }
+    @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+    /* Lists & Items */
     .list-item { 
       padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 14px; 
       display: flex; justify-content: space-between; align-items: center; 
     }
-    .timestamp { font-size: 10px; color: var(--text-sub); display: block; margin-top: 4px; }
-
-    /* Engine Options */
     .engine-opt { 
-      padding: 15px; background: var(--input-bg); margin-bottom: 8px; border-radius: 8px; cursor: pointer; font-weight: 600; 
-      border: 2px solid transparent; display: flex; justify-content: space-between;
+      padding: 12px; background: var(--input-bg); margin-bottom: 8px; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; justify-content: space-between;
     }
-    .engine-opt.selected { border-color: var(--primary); color: var(--primary); background: white; }
+    .engine-opt.selected { background: white; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 
-    /* --- 7. AUTOCOMPLETE --- */
+    /* Autocomplete */
     #autocomplete-results {
-      position: absolute; top: 75px; left: 15px; right: 15px; max-width: 600px; margin: 0 auto;
+      top: 70px; left: 20px; right: 20px; max-width: 600px; margin: 0 auto;
       background: var(--card-bg); backdrop-filter: var(--card-blur);
       border-radius: var(--radius); box-shadow: var(--shadow);
-      max-height: 250px; overflow-y: auto; display: none; z-index: 3000;
+      max-height: 250px; overflow-y: auto; display: none;
     }
     .ac-item { padding: 14px; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 14px; cursor: pointer; }
     .ac-item strong { color: var(--primary); }
 
-    /* Leaflet Cleanup */
     .leaflet-control-attribution, .leaflet-bar { display: none; }
   </style>
 </head>
 <body>
 
-  <div class="top-bar-container">
+  <div id="toast-container" class="toast-layer"></div>
+
+  <div class="top-bar-container ui-layer">
     <div class="top-bar">
       <button class="btn-find" onclick="initLocate()">Find Me</button>
-      <input type="text" id="search-input" placeholder="Search..." oninput="handleTyping()" onkeydown="checkEnter(event)">
+      
+      <div class="search-wrapper">
+        <input type="text" id="search-input" placeholder="Search..." oninput="handleTyping()" onkeydown="checkEnter(event)">
+        <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
+      </div>
       
       <div class="toggle-pill">
         <button id="tog-map" class="toggle-opt active" onclick="setMode('clean')">Map</button>
         <button id="tog-sat" class="toggle-opt" onclick="setMode('sat')">Sat</button>
       </div>
       
-      <button class="icon-btn" onclick="toggleMenu()">☰</button>
+      <button class="icon-btn" onclick="toggleModal('menu-modal')" title="Menu">☰</button>
     </div>
   </div>
 
-  <div id="autocomplete-results"></div>
+  <div id="autocomplete-results" class="autocomplete-layer"></div>
 
-  <div id="map-modal" class="modal-overlay">
-    <div class="modal-header">
+  <div id="map-modal" class="modal modal-layer">
+    <div class="modal-header" onmousedown="startDrag(event, 'map-modal')">
       <h3 class="modal-title">Select Map Style</h3>
-      <button class="close-btn" onclick="toggleMapModal()">×</button>
+      <button class="close-btn" onclick="toggleModal('map-modal')">×</button>
     </div>
-    <div id="engine-list"></div>
+    <div class="modal-body" id="engine-list"></div>
   </div>
 
-  <div id="menu-modal" class="modal-overlay">
-    <div class="modal-header">
+  <div id="menu-modal" class="modal modal-layer">
+    <div class="modal-header" onmousedown="startDrag(event, 'menu-modal')">
       <h3 class="modal-title">Menu</h3>
-      <button class="close-btn" onclick="toggleMenu()">×</button>
+      <button class="close-btn" onclick="toggleModal('menu-modal')">×</button>
     </div>
-    <button class="btn btn-save" onclick="toggleSavedModal()" style="margin-bottom:10px">Saved Points</button>
-    <button class="btn btn-copy" onclick="toggleHistoryModal()" style="margin-bottom:10px">History</button>
-    <button class="btn btn-verify" onclick="toggleErrorModal()" style="margin-bottom:10px">Error Logs</button>
-    <button class="btn btn-verify" onclick="toggleTheme()">Toggle Google Style</button>
+    <div class="modal-body">
+      <button class="btn btn-save" onclick="toggleSaved()" style="margin-bottom:10px">Saved Points</button>
+      <button class="btn btn-copy" onclick="toggleHistory()" style="margin-bottom:10px">History</button>
+      <button class="btn btn-verify" onclick="toggleError()" style="margin-bottom:10px">Error Logs</button>
+    </div>
   </div>
 
-  <div id="saved-modal" class="modal-overlay">
-    <div class="modal-header">
+  <div id="saved-modal" class="modal modal-layer">
+    <div class="modal-header" onmousedown="startDrag(event, 'saved-modal')">
       <h3 class="modal-title">Saved Points</h3>
-      <button class="close-btn" onclick="toggleSavedModal()">×</button>
+      <button class="close-btn" onclick="toggleModal('saved-modal')">×</button>
     </div>
-    <div id="saved-list"></div>
-    <button class="btn btn-copy" onclick="exportList('saved')" style="margin-top:10px">Copy List</button>
+    <div class="modal-body">
+      <div id="saved-list"></div>
+      <button class="btn btn-copy" onclick="exportList('saved')" style="margin-top:10px">Copy List</button>
+    </div>
   </div>
 
-  <div id="history-modal" class="modal-overlay">
-    <div class="modal-header"><h3 class="modal-title">History</h3><button class="close-btn" onclick="toggleHistoryModal()">×</button></div>
-    <div id="history-list"></div>
+  <div id="history-modal" class="modal modal-layer">
+    <div class="modal-header" onmousedown="startDrag(event, 'history-modal')">
+      <h3 class="modal-title">History</h3>
+      <button class="close-btn" onclick="toggleModal('history-modal')">×</button>
+    </div>
+    <div class="modal-body" id="history-list"></div>
   </div>
 
-  <div id="error-modal" class="modal-overlay">
-    <div class="modal-header"><h3 class="modal-title">Error Logs</h3><button class="close-btn" onclick="toggleErrorModal()">×</button></div>
-    <div id="error-list" style="color:var(--danger); font-family:monospace; font-size:12px;"></div>
+  <div id="error-modal" class="modal modal-layer">
+    <div class="modal-header" onmousedown="startDrag(event, 'error-modal')">
+      <h3 class="modal-title">Error Logs</h3>
+      <button class="close-btn" onclick="toggleModal('error-modal')">×</button>
+    </div>
+    <div class="modal-body" id="error-list" style="color:var(--danger); font-family:monospace; font-size:12px;"></div>
   </div>
 
   <div id="map"></div>
 
-  <div class="bottom-sheet" id="bottom-sheet">
+  <div class="bottom-sheet ui-layer" id="bottom-sheet">
     <div class="handle-area" onclick="toggleDock()"><div class="handle-bar"></div></div>
 
     <div class="info-display">
@@ -281,7 +293,7 @@
       <div class="val-macro" id="data-value">Tap map to select...</div>
     </div>
 
-    <button class="btn btn-select" onclick="toggleMapModal()">Select Map Engine ▾</button>
+    <button class="btn btn-select" onclick="toggleModal('map-modal')">Select Map Engine ▾</button>
 
     <div class="btn-grid">
       <button class="btn btn-save" onclick="savePoint()">Save Point</button>
@@ -294,28 +306,44 @@
       <button class="btn btn-verify" onclick="openStreetView()">Street View</button>
     </div>
 
-    <div class="slider-container">
-      <span class="slider-lbl">Clean</span>
-      <input type="range" min="0" max="1" step="0.1" value="0" id="gridSlider">
-      <span class="slider-lbl" style="color:var(--danger)">City Grid</span>
+    <div class="grid-control-row">
+      <span class="grid-label">Bureaucratic View</span>
+      <div class="toggle-pill">
+        <button id="grid-off" class="toggle-opt active" onclick="setGrid(false)">Clean</button>
+        <button id="grid-on" class="toggle-opt" onclick="setGrid(true)">Grid</button>
+      </div>
     </div>
   </div>
 
 <script>
-  // --- 1. STATE MANAGEMENT ---
+  // --- 1. STATE & PERSISTENCE ---
   const state = {
     lat: 0, lng: 0,
     address: "",
     cityCoords: "",
     marker: null,
-    mode: 'clean', // 'clean' or 'sat'
-    activeEngine: { clean: 'voyager', sat: 'esri' }, // Default engines
+    accuracyCircle: null,
+    // Load Preferences
+    mode: localStorage.getItem('ri_mode') || 'clean',
+    gridActive: localStorage.getItem('ri_grid') === 'true', // Boolean
+    activeEngine: JSON.parse(localStorage.getItem('ri_engines')) || { clean: 'osm', sat: 'esri' },
+    
     errors: [],
     history: JSON.parse(localStorage.getItem('ri_history')) || [],
     saved: JSON.parse(localStorage.getItem('ri_saved')) || []
   };
 
-  // --- 2. LOGGING ---
+  // --- 2. TOAST SYSTEM ---
+  function showToast(msg) {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerText = msg;
+    container.appendChild(toast);
+    // Remove after animation (2.8s total)
+    setTimeout(() => { toast.remove(); }, 2800);
+  }
+
   function logError(msg) {
     console.error(msg);
     state.errors.push(`${new Date().toLocaleTimeString()}: ${msg}`);
@@ -323,65 +351,67 @@
     if(el) el.innerHTML = state.errors.map(e => `<div>${e}</div>`).join('');
   }
 
-  // --- 3. MAP CONFIGURATION ---
+  // --- 3. MAP CONFIG ---
   const engines = {
     clean: {
-      voyager: { name: "Carto Voyager (Cleanest)", url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png' },
-      positron: { name: "Carto Positron (Minimal)", url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' },
-      osm: { name: "OpenStreetMap (Detailed)", url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' },
+      osm: { name: "OpenStreetMap (Standard)", url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' },
+      voyager: { name: "Carto Voyager", url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png' },
+      positron: { name: "Carto Positron", url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' },
       esri: { name: "Esri World Street", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}' }
     },
     sat: {
       esri: { name: "Esri Satellite", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' },
-      usgs: { name: "USGS Imagery", url: 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}' }
+      usgs: { name: "USGS Imagery", url: 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}' },
+      hybrid: { name: "Esri Hybrid (Labels)", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' } // Logic handled in refresher
     }
   };
 
   // --- 4. INIT MAP ---
   const map = L.map('map', { zoomControl: false, tap: true }).setView([39.7684, -86.1581], 15);
-  
-  // Base Layer (Start with Voyager)
-  let baseLayer = L.tileLayer(engines.clean.voyager.url, { maxZoom: 19 }).addTo(map);
+  let baseLayer = null;
 
   // City Layers
   const cityUrl = 'https://xmaps.indy.gov/arcgis/rest/services/SalesForce/MAC311/MapServer';
   
-  // L18: Addresses (Always on top when zoomed)
-  L.esri.dynamicMapLayer({
-    url: cityUrl, layers: [18], opacity: 1, f: 'json', minZoom: 17, useCors: false
+  const layerAddresses = L.esri.dynamicMapLayer({
+    url: cityUrl, layers: [18], opacity: 0.9, f: 'json', minZoom: 17, useCors: false
   }).addTo(map);
-
-  // L16: The Grid (Started Invisible)
-  const cityGrid = L.esri.dynamicMapLayer({
+  
+  const layerGrid = L.esri.dynamicMapLayer({
     url: cityUrl, layers: [16], opacity: 0, f: 'json', useCors: false
   }).addTo(map);
 
-  // --- 5. LOGIC & GEOSPATIAL ---
+  // --- 5. LOGIC: GEOSPATIAL ---
   if(window.proj4) {
     proj4.defs("EPSG:2965", "+proj=tmerc +lat_0=37.5 +lon_0=-85.66666666666667 +k=0.9999666666666667 +x_0=2960000 +y_0=250000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=us-ft +no_defs");
   }
 
-  // Click Handler
+  // --- 6. CORE FUNCTIONS ---
+  
+  // Apply saved preferences immediately
+  updateModeUI();
+  updateGridUI();
+  refreshBaseLayer();
+
+  // Map Click
   map.on('click', (e) => {
-    // 1. Visual Marker
+    // 1. Marker Logic
     if(state.marker) map.removeLayer(state.marker);
     state.marker = L.marker(e.latlng).addTo(map);
     
     // 2. Open Dock
     document.getElementById('bottom-sheet').classList.remove('minimized');
     
-    // 3. Data Processing
+    // 3. Process
     processLocation(e.latlng);
   });
 
   function processLocation(latlng) {
     document.getElementById('result-text').innerText = "Processing...";
-    
-    // Update State IMMEDIATELY (Fixes Saved Points Bug)
     state.lat = latlng.lat;
     state.lng = latlng.lng;
 
-    // City Coordinates
+    // A. City Coords
     if(window.proj4) {
       try {
         const indy = proj4("EPSG:4326", "EPSG:2965", [latlng.lng, latlng.lat]);
@@ -389,36 +419,43 @@
       } catch(e) { logError("Proj4: " + e.message); }
     }
 
-    // Address Lookup
+    // B. Address Lookup (CRITICAL FIX: User-Agent + Strict Error Handling)
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latlng.lat}&lon=${latlng.lng}`;
     
-    fetch(url)
-      .then(r => r.json())
+    fetch(url, {
+        headers: { 'User-Agent': 'Request-Indy-App' } // Fixes 403 Forbidden
+    })
+      .then(r => {
+        if(!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then(d => {
+        if(d.error) throw new Error(d.error);
         const a = d.address;
         const name = d.name ? d.name + ", " : "";
         const num = a.house_number || "";
         const road = a.road || "Unnamed Location";
         state.address = name + (num ? `${num} ${road}` : road);
+        
         updateUI();
         addToHistory();
       })
       .catch((e) => {
-        state.address = "Unknown Location";
+        state.address = "No Address Found";
         logError("Geocode: " + e.message);
         updateUI();
       });
   }
 
   function updateUI() {
-    const sliderVal = document.getElementById('gridSlider').value;
     const label = document.getElementById('data-label');
     const val = document.getElementById('data-value');
 
-    if(sliderVal > 0.1) {
+    // Context Aware Display
+    if(state.gridActive) {
       label.innerText = "OFFICIAL CITY COORDINATES";
       label.style.color = "var(--danger)";
-      val.innerText = state.cityCoords || "Loading...";
+      val.innerText = state.cityCoords || "Calculating...";
     } else {
       label.innerText = "STANDARD ADDRESS / POI";
       label.style.color = "var(--text-sub)";
@@ -426,65 +463,169 @@
     }
   }
 
-  // --- 6. ROBUST GPS (8s Timeout + Fallback) ---
+  // --- 7. TOGGLES & MODES ---
+  
+  // Map vs Sat
+  window.setMode = function(mode) {
+    state.mode = mode;
+    localStorage.setItem('ri_mode', mode); // Persist
+    updateModeUI();
+    refreshBaseLayer();
+  }
+
+  function updateModeUI() {
+    document.getElementById('tog-map').classList.toggle('active', state.mode === 'clean');
+    document.getElementById('tog-sat').classList.toggle('active', state.mode === 'sat');
+  }
+
+  // Clean vs Grid
+  window.setGrid = function(isActive) {
+    state.gridActive = isActive;
+    localStorage.setItem('ri_grid', isActive); // Persist
+    updateGridUI();
+  }
+
+  function updateGridUI() {
+    // Update Toggle UI
+    document.getElementById('grid-off').classList.toggle('active', !state.gridActive);
+    document.getElementById('grid-on').classList.toggle('active', state.gridActive);
+    
+    // Update Layer Opacity
+    layerGrid.setOpacity(state.gridActive ? 1 : 0);
+    
+    // Update Text Display
+    updateUI();
+  }
+
+  // Engine Switcher
+  window.refreshBaseLayer = function() {
+    if(baseLayer) map.removeLayer(baseLayer);
+    
+    // Retain Center/Zoom is handled automatically by Leaflet when switching layers
+    
+    const engineKey = state.activeEngine[state.mode];
+    const url = engines[state.mode][engineKey].url;
+    
+    baseLayer = L.tileLayer(url, { maxZoom: 19 }).addTo(map);
+    baseLayer.bringToBack();
+    
+    // Special Hybrid Logic
+    if(state.mode === 'sat' && engineKey === 'hybrid') {
+        // Add overlay labels here if needed, simplified for single layer
+    }
+  }
+
+  window.switchEngine = function(key) {
+    state.activeEngine[state.mode] = key;
+    localStorage.setItem('ri_engines', JSON.stringify(state.activeEngine)); // Persist
+    refreshBaseLayer();
+    renderMapModal();
+  }
+
+  // --- 8. ROBUST GPS ---
   window.initLocate = function() {
     const btn = document.querySelector('.btn-find');
-    btn.innerText = "Locating...";
+    btn.innerText = "Locating..."; // Visual Feedback
     
-    // Attempt High Accuracy
+    // High Accuracy attempt
     map.locate({setView: true, maxZoom: 18, enableHighAccuracy: true, timeout: 8000});
     
     map.on('locationfound', (e) => {
       btn.innerText = "Find Me";
       processLocation(e.latlng);
-      // Ensure User Pin
+      
+      // Update Visuals
+      if(state.accuracyCircle) map.removeLayer(state.accuracyCircle);
       if(state.marker) map.removeLayer(state.marker);
+      
+      state.accuracyCircle = L.circle(e.latlng, { radius: e.accuracy, color: 'var(--primary)', fillOpacity: 0.1, weight: 1 }).addTo(map);
       state.marker = L.marker(e.latlng).addTo(map);
     });
 
     map.on('locationerror', (e) => {
-      logError(`High-Acc GPS Failed (${e.code}): ${e.message}`);
-      // Retry Low Accuracy
-      if(e.code === 3 || e.message.includes("timeout")) { 
+      logError(`GPS Error (${e.code}): ${e.message}`);
+      if(e.code === 3 || e.message.includes('timeout')) {
+         // Fallback
          map.locate({setView: true, maxZoom: 18, enableHighAccuracy: false});
       } else {
          btn.innerText = "Find Me";
-         alert("GPS Error. Check Permissions.");
+         showToast("GPS Denied/Error");
       }
     });
   }
 
-  // --- 7. SLIDER LOGIC ---
-  document.getElementById('gridSlider').addEventListener('input', (e) => {
-    cityGrid.setOpacity(e.target.value);
-    updateUI();
-  });
+  // --- 9. MODAL & DRAG LOGIC ---
+  function toggleModal(id) {
+    const m = document.getElementById(id);
+    const isOpen = m.style.display === 'flex';
+    
+    // Close all first
+    document.querySelectorAll('.modal').forEach(el => el.style.display = 'none');
+    
+    if(!isOpen) {
+        m.style.display = 'flex';
+        // Reset position on open to avoid lost windows
+        if(window.innerWidth > 768) {
+            m.style.top = '100px';
+            m.style.left = '20px';
+        }
+        
+        // Render specific content
+        if(id === 'map-modal') renderMapModal();
+        if(id === 'saved-modal') renderSavedList();
+        if(id === 'history-modal') renderHistoryList();
+    }
+  }
+  
+  // Shortcut functions
+  window.toggleSaved = () => toggleModal('saved-modal');
+  window.toggleHistory = () => toggleModal('history-modal');
+  window.toggleError = () => toggleModal('error-modal');
+  window.toggleMapModal = () => toggleModal('map-modal');
+  window.toggleModal = toggleModal; // expose for close buttons
 
-  // --- 8. MAP ENGINE SWITCHER ---
-  window.setMode = function(mode) {
-    state.mode = mode;
-    document.getElementById('tog-map').classList.toggle('active', mode === 'clean');
-    document.getElementById('tog-sat').classList.toggle('active', mode === 'sat');
-    refreshBaseLayer();
+  // DRAG IMPLEMENTATION
+  let dragItem = null;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  window.startDrag = function(e, id) {
+    if(window.innerWidth <= 768) return; // Disable on mobile
+    dragItem = document.getElementById(id);
+    offsetX = e.clientX - dragItem.getBoundingClientRect().left;
+    offsetY = e.clientY - dragItem.getBoundingClientRect().top;
+    
+    document.addEventListener('mousemove', dragMove);
+    document.addEventListener('mouseup', dragEnd);
   }
 
-  window.refreshBaseLayer = function() {
-    if(baseLayer) map.removeLayer(baseLayer);
-    const engineKey = state.activeEngine[state.mode];
-    const url = engines[state.mode][engineKey].url;
-    baseLayer = L.tileLayer(url, { maxZoom: 19 }).addTo(map);
-    baseLayer.bringToBack(); // Ensures overlays stay on top
+  function dragMove(e) {
+    if(!dragItem) return;
+    e.preventDefault();
+    let x = e.clientX - offsetX;
+    let y = e.clientY - offsetY;
+    
+    // Bounds Check (Keep 20px visible)
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    if(x > w - 20) x = w - 20;
+    if(x < -dragItem.offsetWidth + 20) x = -dragItem.offsetWidth + 20;
+    if(y < 0) y = 0;
+    if(y > h - 20) y = h - 20;
+
+    dragItem.style.left = x + 'px';
+    dragItem.style.top = y + 'px';
   }
 
-  window.switchEngine = function(key) {
-    state.activeEngine[state.mode] = key;
-    refreshBaseLayer();
-    renderMapModal();
+  function dragEnd() {
+    dragItem = null;
+    document.removeEventListener('mousemove', dragMove);
+    document.removeEventListener('mouseup', dragEnd);
   }
 
-  // --- 9. SAVED & HISTORY ---
+  // --- 10. SAVED/HISTORY LOGIC ---
   function addToHistory() {
-    // Only add if unique from last entry
+    // Prevent dupe spam
     if(state.history.length > 0 && state.history[0].addr === state.address) return;
     
     state.history.unshift({ 
@@ -497,15 +638,14 @@
   }
 
   window.savePoint = function() {
-    if(!state.lat || !state.address) return alert("Select a location first");
-    
+    if(!state.address || state.address.includes("Unknown")) return showToast("Select valid location first");
     state.saved.push({ addr: state.address, coords: state.cityCoords, lat: state.lat, lng: state.lng });
     localStorage.setItem('ri_saved', JSON.stringify(state.saved));
     L.circleMarker([state.lat, state.lng], { color: 'var(--success)', radius: 6, fillOpacity: 1 }).addTo(map);
-    alert("Saved!");
+    showToast("Location Saved!");
   }
 
-  // --- 10. UI RENDERING ---
+  // Renders
   window.renderMapModal = function() {
     const list = document.getElementById('engine-list');
     list.innerHTML = "";
@@ -525,7 +665,7 @@
     el.innerHTML = state.saved.map((item, i) => `
       <div class="list-item">
         <div class="list-content"><strong>${item.addr}</strong><br><small>${item.coords}</small></div>
-        <button onclick="removeSaved(${i})" style="color:var(--danger); border:none; background:none; cursor:pointer;">✕</button>
+        <button onclick="removeSaved(${i})" style="color:var(--danger); border:none; background:none; cursor:pointer; font-size:18px;">✕</button>
       </div>
     `).join('');
   }
@@ -545,97 +685,96 @@
     renderSavedList();
   }
 
-  // --- 11. EXTERNAL APPS (SANDBOX BREAKERS) ---
+  window.exportList = (type) => {
+    const source = type === 'saved' ? state.saved : state.history;
+    let txt = "REQUEST-INDY REPORT:\n\n";
+    source.forEach((p, i) => txt += `${i+1}. ${p.addr}\n   ${p.coords || p.ts}\n\n`);
+    navigator.clipboard.writeText(txt).then(() => showToast("List Copied!"));
+  }
+
+  // --- 11. EXTERNAL LINKS ---
   window.openGoogle = () => {
-    if(!state.lat) return alert("Select location");
+    if(!state.lat) return showToast("Select location");
     window.location.href = `https://www.google.com/maps/search/?api=1&query=${state.lat},${state.lng}`;
   }
   window.openApple = () => {
-    if(!state.lat) return alert("Select location");
+    if(!state.lat) return showToast("Select location");
     window.location.href = `http://maps.apple.com/?q=${state.lat},${state.lng}`;
   }
   window.openStreetView = () => {
-    if(!state.lat) return alert("Select location");
-    // Standard Google Street View URL Scheme
+    if(!state.lat) return showToast("Select location");
     window.location.href = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint={state.lat},${state.lng}`;
   }
 
   // --- 12. UTILS ---
   window.toggleDock = () => document.getElementById('bottom-sheet').classList.toggle('minimized');
-  window.toggleMenu = () => document.getElementById('menu-modal').style.display = 'flex';
-  window.toggleMapModal = () => { document.getElementById('map-modal').style.display = 'flex'; renderMapModal(); }
-  window.toggleSavedModal = () => { document.getElementById('saved-modal').style.display = 'flex'; document.getElementById('menu-modal').style.display = 'none'; renderSavedList(); }
-  window.toggleHistoryModal = () => { document.getElementById('history-modal').style.display = 'flex'; document.getElementById('menu-modal').style.display = 'none'; renderHistoryList(); }
-  window.toggleErrorModal = () => { document.getElementById('error-modal').style.display = 'flex'; document.getElementById('menu-modal').style.display = 'none'; }
-  window.toggleTheme = () => { document.body.classList.toggle('google-theme'); document.getElementById('menu-modal').style.display = 'none'; }
   
-  // Close Modals
-  document.querySelectorAll('.close-btn').forEach(btn => btn.addEventListener('click', (e) => e.target.closest('.modal-overlay').style.display = 'none'));
-
   window.smartCopy = function() {
-    const sliderVal = document.getElementById('gridSlider').value;
-    const txt = (sliderVal > 0.1) ? state.cityCoords : state.address;
-    navigator.clipboard.writeText(txt).then(() => alert("Copied: " + txt));
+    const txt = state.gridActive ? state.cityCoords : state.address;
+    if(!txt) return showToast("No data to copy");
+    navigator.clipboard.writeText(txt).then(() => showToast("Copied!"));
   }
 
-  window.exportList = (type) => {
-    const source = type === 'saved' ? state.saved : state.history;
-    let txt = "REQUEST-INDY REPORT:\n\n";
-    source.forEach((p, i) => txt += `${i+1}. ${p.addr}\n   ${p.coords || p.ts}\n\n`);
-    navigator.clipboard.writeText(txt).then(() => alert("Copied!"));
-  }
-
-  // --- 13. AUTOCOMPLETE (Optimized) ---
+  // Search Logic (Debounce + Enter Key)
   let typeTimer;
   window.handleTyping = function() {
     clearTimeout(typeTimer);
     const q = document.getElementById('search-input').value.trim();
+    document.getElementById('search-clear').style.display = q.length > 0 ? 'flex' : 'none';
     const list = document.getElementById('autocomplete-results');
     
-    if(q.length < 2) { list.style.display = 'none'; return; } // Trigger at 2 chars
+    if(q.length < 2) { list.style.display = 'none'; return; }
 
-    typeTimer = setTimeout(() => {
-      const safeQ = encodeURIComponent(q.toLowerCase().includes("indy") ? q : q + ", Indianapolis");
-      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${safeQ}`)
-        .then(r => r.json())
-        .then(data => {
-          list.innerHTML = "";
-          if(data.length) {
-            list.style.display = 'block';
-            data.forEach(item => {
-              const div = document.createElement('div');
-              div.className = 'ac-item';
-              div.innerHTML = `<strong>${item.display_name.split(',')[0]}</strong><br><small>${item.display_name}</small>`;
-              div.onclick = () => {
-                map.setView([item.lat, item.lon], 18);
-                processLocation({lat: item.lat, lng: item.lon});
-                if(state.marker) map.removeLayer(state.marker);
-                state.marker = L.marker([item.lat, item.lon]).addTo(map);
-                document.getElementById('search-input').value = item.display_name.split(',')[0];
-                list.style.display = 'none';
-              };
-              list.appendChild(div);
-            });
-          }
-        });
-    }, 500);
+    typeTimer = setTimeout(() => { executeSearch(q); }, 500);
   }
 
   window.checkEnter = function(e) {
-    if(e.key === "Enter") {
+    if(e.key === 'Enter') {
         clearTimeout(typeTimer);
         const q = document.getElementById('search-input').value.trim();
-        if(q.length > 1) {
-             const safeQ = encodeURIComponent(q.toLowerCase().includes("indy") ? q : q + ", Indianapolis");
-             // Force search immediate logic here if needed, currently relies on typing logic but speeds it up
-             // For now, we let the typing handler take it to avoid duplicate calls, or trigger manual fetch here.
-        }
+        executeSearch(q);
+        document.getElementById('search-input').blur(); // Close keyboard
     }
   }
 
-  // Run GPS on Load
-  initLocate();
+  function executeSearch(q) {
+    const list = document.getElementById('autocomplete-results');
+    const safeQ = encodeURIComponent(q.toLowerCase().includes("indy") ? q : q + ", Indianapolis");
+    
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${safeQ}`, {
+        headers: { 'User-Agent': 'Request-Indy-App' }
+    })
+      .then(r => r.json())
+      .then(data => {
+        list.innerHTML = "";
+        if(data.length) {
+          list.style.display = 'block';
+          data.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'ac-item';
+            div.innerHTML = `<strong>${item.display_name.split(',')[0]}</strong><br><small>${item.display_name}</small>`;
+            div.onclick = () => {
+              map.setView([item.lat, item.lon], 18);
+              processLocation({lat: item.lat, lng: item.lon});
+              if(state.marker) map.removeLayer(state.marker);
+              state.marker = L.marker([item.lat, item.lon]).addTo(map);
+              document.getElementById('search-input').value = item.display_name.split(',')[0];
+              list.style.display = 'none';
+            };
+            list.appendChild(div);
+          });
+        }
+      });
+  }
 
+  window.clearSearch = function() {
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-clear').style.display = 'none';
+    document.getElementById('autocomplete-results').style.display = 'none';
+  }
+
+  // Init
+  initLocate(); // Try to find user immediately
 </script>
 </body>
 </html>
