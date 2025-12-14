@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Request-Indy V18</title>
+  <title>Request-Indy V19</title>
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -11,35 +11,55 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
 
   <style>
-    /* --- 2. CSS VARIABLES (Strict Apple Aesthetic) --- */
+    /* --- 2. THEME ENGINE (Dark Mode Default) --- */
     :root {
+      /* DEFAULT: DARK MODE */
       --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-      --bg-color: #F2F2F7;
-      /* Glassmorphism Variables */
-      --glass-bg: rgba(255, 255, 255, 0.85);
-      --glass-blur: blur(20px);
-      --text-main: #000000;
+      --bg-color: #000000;
+      --glass-bg: rgba(28, 28, 30, 0.85); /* Dark Glass */
+      --glass-blur: blur(25px);
+      --text-main: #FFFFFF;
       --text-sub: #8E8E93;
-      --primary: #007AFF; 
-      --danger: #FF3B30;  
-      --success: #34C759; 
+      --primary: #0A84FF; /* iOS Dark Mode Blue */
+      --danger: #FF453A;  /* iOS Dark Mode Red */
+      --success: #32D74B; /* iOS Dark Mode Green */
       --radius: 22px;
-      --shadow: 0 8px 32px rgba(0,0,0,0.12);
-      --border: 0.5px solid rgba(0,0,0,0.1);
-      --input-bg: rgba(118, 118, 128, 0.12);
-      --handle: #C7C7CC;
+      --shadow: 0 8px 32px rgba(0,0,0,0.5);
+      --border: 0.5px solid rgba(255,255,255,0.1);
+      --input-bg: rgba(118, 118, 128, 0.24);
+      --handle: #5E5E5E;
+      --pill-bg: #636366; /* Pill inactive background */
+      --pill-active: #1C1C1E; /* Pill active background (dark) */
+    }
+
+    /* SYSTEM LIGHT MODE OVERRIDE */
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg-color: #F2F2F7;
+        --glass-bg: rgba(255, 255, 255, 0.85);
+        --text-main: #000000;
+        --primary: #007AFF;
+        --danger: #FF3B30;
+        --success: #34C759;
+        --shadow: 0 8px 32px rgba(0,0,0,0.12);
+        --border: 0.5px solid rgba(0,0,0,0.1);
+        --input-bg: rgba(118, 118, 128, 0.12);
+        --handle: #C7C7CC;
+        --pill-bg: #E5E5EA;
+        --pill-active: #FFFFFF;
+      }
     }
 
     /* --- 3. GLOBAL RESET & MOBILE FIX --- */
     body, html { 
       height: 100dvh; /* CRITICAL: Dynamic Viewport Height */
       width: 100%; margin: 0; padding: 0; 
-      overflow: hidden; font-family: var(--font); background: var(--bg-color);
+      overflow: hidden; font-family: var(--font); background: var(--bg-color); color: var(--text-main);
       -webkit-tap-highlight-color: transparent;
       -webkit-font-smoothing: antialiased;
     }
 
-    /* UTILITY: NO SELECT (Touch Polish) */
+    /* UTILITY: NO SELECT */
     .no-select { user-select: none; -webkit-user-select: none; }
 
     /* Z-INDEX STRATEGY */
@@ -62,36 +82,40 @@
     .btn-gray { background: var(--input-bg); color: var(--text-main); }
     .btn-outline { background: transparent; border: 1px solid var(--text-sub); color: var(--text-main); font-size: 13px; }
 
-    /* --- TOP BAR --- */
+    /* --- TOP BAR (Responsive Flex) --- */
     .top-container {
       top: 0; left: 0; right: 0; display: flex; justify-content: center;
       padding-top: max(16px, env(safe-area-inset-top));
     }
     .top-bar {
-      height: 50px; border-radius: 25px; padding: 0 6px; width: 94%; max-width: 600px;
+      height: 50px; border-radius: 25px; padding: 0 8px; width: 94%; max-width: 600px;
       display: flex; align-items: center; gap: 8px;
     }
     .btn-find {
-      background: var(--primary); color: white; border: none; height: 36px; padding: 0 16px; 
-      border-radius: 18px; font-size: 13px; font-weight: 600; cursor: pointer;
+      background: var(--primary); color: white; border: none; height: 36px; padding: 0 14px; 
+      border-radius: 18px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
     }
+    
+    /* Responsive Search Wrap */
     .search-wrap {
-      flex: 1; height: 36px; background: var(--input-bg); border-radius: 10px;
+      flex: 1; min-width: 0; /* Allows shrinking */
+      height: 36px; background: var(--input-bg); border-radius: 10px;
       display: flex; align-items: center; padding: 0 8px;
     }
     #search-input {
-      flex: 1; height: 100%; border: none; background: transparent; font-size: 16px; outline: none;
+      flex: 1; height: 100%; border: none; background: transparent; 
+      font-size: 16px; outline: none; color: var(--text-main); min-width: 0;
     }
 
     /* --- SLIDING PHYSICS TOGGLE --- */
     .slide-toggle-container {
-      position: relative; width: 90px; height: 36px; background: var(--input-bg);
+      position: relative; width: 86px; height: 36px; background: var(--input-bg);
       border-radius: 18px; display: flex; align-items: center; padding: 2px;
-      cursor: pointer; overflow: hidden;
+      cursor: pointer; overflow: hidden; flex-shrink: 0; /* Fixed Width */
     }
     .slide-bg {
-      position: absolute; top: 2px; left: 2px; width: 43px; height: 32px;
-      background: #FFFFFF; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      position: absolute; top: 2px; left: 2px; width: 41px; height: 32px;
+      background: var(--pill-active); border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
       transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); pointer-events: none;
     }
     .slide-labels {
@@ -102,10 +126,10 @@
       font-size: 12px; font-weight: 600; color: var(--text-main);
     }
     /* Toggle State Class */
-    .slide-toggle-container.sat-mode .slide-bg { transform: translateX(43px); }
+    .slide-toggle-container.sat-mode .slide-bg { transform: translateX(41px); }
 
     .icon-btn {
-      background: transparent; border: none; font-size: 20px; cursor: pointer; padding: 0 8px; color: var(--primary); pointer-events: auto;
+      background: transparent; border: none; font-size: 20px; cursor: pointer; padding: 0 8px; color: var(--primary); pointer-events: auto; flex-shrink: 0;
     }
 
     /* --- BOTTOM SHEET (PHYSICS) --- */
@@ -143,15 +167,15 @@
       padding: 0 0 20px 0; border-radius: 25px; display: none; flex-direction: column; max-height: 60vh;
     }
     .modal-header {
-      padding: 15px; background: rgba(0,0,0,0.03); border-bottom: var(--border);
+      padding: 15px; background: rgba(255,255,255,0.05); border-bottom: var(--border);
       border-radius: 25px 25px 0 0; display: flex; justify-content: center; align-items: center; cursor: grab;
     }
-    .modal-title { margin: 0; font-size: 16px; font-weight: 700; }
+    .modal-title { margin: 0; font-size: 16px; font-weight: 700; color: var(--text-main); }
     .modal-body { padding: 15px; overflow-y: auto; }
     
     .list-item { 
       display: grid; grid-template-columns: 1fr auto; align-items: center; 
-      padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.05); gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); gap: 10px;
     }
     .note-input {
       width: 100%; border: none; background: var(--input-bg); padding: 6px; 
@@ -161,9 +185,9 @@
     /* --- TOAST --- */
     #toast-container { top: 100px; left: 50%; transform: translateX(-50%); width: auto; text-align: center; }
     .toast {
-      background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); color: black;
+      background: var(--glass-bg); backdrop-filter: blur(10px); color: var(--text-main);
       padding: 10px 20px; border-radius: 20px; margin-bottom: 10px; font-size: 14px; font-weight: 600;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.15); animation: fadeOut 3s forwards;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3); animation: fadeOut 3s forwards; border: var(--border);
     }
     @keyframes fadeOut { 0% { opacity: 0; transform: translateY(-10px); } 10% { opacity: 1; transform: translateY(0); } 80% { opacity: 1; } 100% { opacity: 0; } }
 
@@ -172,7 +196,7 @@
       top: 80px; left: 20px; right: 20px; max-width: 600px; margin: 0 auto;
       border-radius: 20px; max-height: 250px; overflow-y: auto; display: none; pointer-events: auto;
     }
-    .ac-item { padding: 14px; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 14px; cursor: pointer; }
+    .ac-item { padding: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 14px; cursor: pointer; color: var(--text-main); }
 
     /* MAP ELEMENTS */
     .leaflet-control-attribution, .leaflet-bar { display: none; }
@@ -186,7 +210,7 @@
     <div class="top-bar glass">
       <button class="btn-find no-select" onclick="handleFindMe()">Find Me</button>
       <div class="search-wrap">
-        <input type="text" id="search-input" placeholder="Search..." oninput="handleTyping()" onkeydown="checkEnter(event)">
+        <input type="text" id="search-input" placeholder="Search..." oninput="handleTyping()">
       </div>
       
       <div class="slide-toggle-container no-select" id="mode-toggle" onclick="toggleMapMode()">
@@ -248,7 +272,7 @@
     </div>
 
     <div class="slider-row">
-      <span class="label-micro" style="color:black">Clean</span>
+      <span class="label-micro" style="color:var(--text-main)">Clean</span>
       <input type="range" min="0" max="1" step="0.1" value="0" id="gridSlider">
       <span class="label-micro" style="color:var(--danger)">Grid</span>
     </div>
@@ -340,7 +364,7 @@
     }
 
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latlng.lat}&lon=${latlng.lng}&addressdetails=1`;
-    fetch(url, { headers: { 'User-Agent': 'Request-Indy-V18' } })
+    fetch(url, { headers: { 'User-Agent': 'Request-Indy-V19' } })
       .then(r => r.json())
       .then(d => {
         if(d.error) throw new Error();
@@ -383,7 +407,7 @@
 
   // --- 6. PHYSICS & UI (TOGGLE + SHEET) ---
   window.toggleMapMode = () => {
-    // 1. Remove old layer to prevent bleed-through
+    // Layer Swapping Logic
     map.removeLayer(activeLayer);
     
     state.mode = state.mode === 'clean' ? 'sat' : 'clean';
@@ -393,7 +417,7 @@
     if (state.mode === 'sat') toggle.classList.add('sat-mode');
     else toggle.classList.remove('sat-mode');
 
-    // 2. Add new layer
+    // Add new layer
     const url = state.mode === 'clean' ? engines.clean.url : engines.sat.url;
     activeLayer = L.tileLayer(url, { maxZoom: 19 }).addTo(map);
     activeLayer.bringToBack();
@@ -407,7 +431,7 @@
   handle.addEventListener('touchstart', e => {
     startY = e.touches[0].clientY;
     isDragging = true;
-    sheet.style.transition = 'none'; // Instant follow
+    sheet.style.transition = 'none'; 
   }, {passive:true});
 
   handle.addEventListener('touchmove', e => {
@@ -422,7 +446,6 @@
     sheet.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
     const delta = e.changedTouches[0].clientY - startY;
     
-    // Tap Detection
     if(Math.abs(delta) < 10) {
         const isMin = sheet.classList.contains('minimized');
         sheet.style.transform = isMin ? 'translateY(0)' : 'translateY(calc(100% - 30px))';
@@ -430,7 +453,6 @@
         return;
     }
 
-    // Snap Logic
     if(delta > 50) {
         sheet.style.transform = 'translateY(calc(100% - 30px))';
         sheet.classList.add('minimized');
@@ -440,7 +462,7 @@
     }
   });
   
-  // Mouse Support for Desktop Dragging
+  // Mouse Support for Desktop
   handle.addEventListener('mousedown', e => {
       startY = e.clientY;
       isDragging = true;
@@ -479,7 +501,6 @@
 
   // --- 7. SAVED POINTS & MODALS ---
   window.toggleMenu = () => {
-    // Global Reset Check
     const openModal = Array.from(document.querySelectorAll('.modal')).find(m => m.style.display === 'flex');
     if (openModal) toggleModal('none');
     else toggleModal('menu-modal');
@@ -496,7 +517,7 @@
     }
   };
 
-  // Draggable Modals (Header Only)
+  // Draggable Modals
   ['menu-handle', 'saved-handle', 'history-handle'].forEach(id => {
       const h = document.getElementById(id);
       if(h) makeDraggable(h, h.parentElement);
@@ -525,7 +546,7 @@
     state.savedLayerGroup.clearLayers();
     state.saved.forEach((p, i) => {
       L.circleMarker([p.lat, p.lng], { radius: 6, color: 'white', fillColor: 'var(--green)', fillOpacity: 1, weight: 2 })
-       .bindPopup(`<b>${p.addr}</b><br><input type="text" value="${p.notes}" onchange="updateNote(${i}, this.value)" style="margin-top:5px; width:100%">`)
+       .bindPopup(`<b>${p.addr}</b><br><input type="text" value="${p.notes}" onchange="updateNote(${i}, this.value)" style="margin-top:5px; width:100%; color:black;">`)
        .addTo(state.savedLayerGroup);
     });
   }
@@ -563,7 +584,7 @@
 
   function renderHistoryList() {
     document.getElementById('history-list').innerHTML = state.history.map(p => `
-      <div class="list-item"><div><strong>${p.addr}</strong><br><small>${p.ts}</small></div></div>
+      <div class="list-item"><div><strong>${p.addr}</strong><br><small style="color:var(--text-sub)">${p.ts}</small></div></div>
     `).join('');
   }
 
@@ -607,12 +628,11 @@
     const q = document.getElementById('search-input').value;
     if(q.length < 3) return;
     
-    // Get Bounds for Context
     const b = map.getBounds();
     const viewbox = `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`;
 
     typeTimer = setTimeout(() => {
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&viewbox=${viewbox}&bounded=1&addressdetails=1`, {headers:{'User-Agent':'Request-Indy-V18'}})
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&viewbox=${viewbox}&bounded=1&addressdetails=1`, {headers:{'User-Agent':'Request-Indy-V19'}})
         .then(r=>r.json()).then(data=>{
             const list = document.getElementById('autocomplete-results');
             list.innerHTML = ""; list.style.display = 'block';
@@ -631,12 +651,9 @@
     }, 500);
   };
   
-  // Enter key support
   window.checkEnter = (e) => {
       if(e.key === 'Enter') {
           clearTimeout(typeTimer);
-          const q = document.getElementById('search-input').value;
-          // Trigger immediate search (simplified)
       }
   }
 </script>
