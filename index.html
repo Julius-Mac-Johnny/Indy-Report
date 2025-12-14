@@ -11,12 +11,14 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
 
   <style>
-    /* --- 2. CSS VARIABLES (Apple Aesthetic) --- */
+    /* --- 2. CSS VARIABLES (Strict Apple Aesthetic) --- */
     :root {
       --font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
       --bg-color: #F2F2F7;
-      --card-bg: rgba(255, 255, 255, 0.85); /* Glassmorphism */
-      --card-blur: blur(25px);
+      /* Glassmorphism Variables */
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-blur: blur(20px);
+      
       --text-main: #000000;
       --text-sub: #8E8E93;
       --primary: #007AFF; 
@@ -35,173 +37,178 @@
       overflow: hidden; font-family: var(--font-stack); 
       background: var(--bg-color); color: var(--text-main);
       -webkit-font-smoothing: antialiased;
+      -webkit-tap-highlight-color: transparent;
     }
 
     /* Z-INDEX STRATEGY */
     #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 0; }
     .ui-layer { z-index: 1000; position: absolute; pointer-events: none; }
-    .modal-layer { z-index: 2000; position: absolute; }
+    .modal-layer { z-index: 2000; position: absolute; } 
     .toast-layer { z-index: 3000; position: fixed; pointer-events: none; }
+    
+    /* GLASSMORPHISM UTILITY */
+    .glass {
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: var(--border);
+      box-shadow: var(--shadow);
+    }
 
-    /* --- 4. TOP BAR --- */
-    .top-bar-container { 
+    /* --- 4. TOP FLOATING BAR --- */
+    .top-container {
       top: 16px; left: 0; right: 0; display: flex; justify-content: center;
     }
-    .top-bar { 
-      pointer-events: auto; background: var(--card-bg); backdrop-filter: var(--card-blur);
-      border: var(--border); box-shadow: var(--shadow); height: 50px; 
-      border-radius: 25px; display: flex; align-items: center; padding: 0 6px; 
-      gap: 8px; width: 90%; max-width: 600px;
-    }
-    .btn-find { 
-      background: var(--primary); color: white; border: none; height: 36px; 
-      padding: 0 16px; border-radius: 18px; font-size: 13px; font-weight: 600; 
-      cursor: pointer; white-space: nowrap;
-    }
-    .search-wrapper { 
-      flex: 1; height: 36px; background: var(--input-bg); border-radius: 10px; 
-      display: flex; align-items: center; padding: 0 8px; position: relative;
-    }
-    #search-input { 
-      flex: 1; height: 100%; border: none; background: transparent; 
-      font-family: var(--font-stack); font-size: 16px; outline: none; min-width: 0;
-    }
-    .search-clear { 
-      display: none; background: #8E8E93; color: white; border-radius: 50%; 
-      width: 16px; height: 16px; font-size: 10px; border: none; 
-      align-items: center; justify-content: center; cursor: pointer;
-    }
-    .toggle-pill { 
-      background: var(--input-bg); border-radius: 18px; padding: 2px; 
-      display: flex; height: 36px; flex-shrink: 0;
-    }
-    .toggle-opt { 
-      padding: 0 12px; border: none; background: transparent; border-radius: 16px; 
-      font-size: 12px; font-weight: 600; color: var(--text-sub); cursor: pointer;
-    }
-    .toggle-opt.active { 
-      background: var(--card-bg); color: var(--text-main); box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .icon-btn { 
-      background: transparent; border: none; font-size: 20px; cursor: pointer; 
-      padding: 0 8px; color: var(--primary); pointer-events: auto;
+    
+    .top-bar {
+      pointer-events: auto;
+      height: 50px; border-radius: 25px;
+      display: flex; align-items: center; padding: 0 6px; gap: 8px;
+      width: 92%; max-width: 600px;
     }
 
-    /* --- 5. BOTTOM SHEET --- */
-    .bottom-sheet { 
-      pointer-events: auto; bottom: 0; left: 0; right: 0; 
-      background: var(--card-bg); backdrop-filter: var(--card-blur); 
-      border-top: var(--border); border-radius: var(--radius) var(--radius) 0 0; 
-      box-shadow: var(--shadow); padding: 0 20px 30px 20px; 
-      transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); transform: translateY(0);
+    .btn-find {
+      background: var(--primary); color: white; border: none;
+      height: 36px; padding: 0 16px; border-radius: 18px;
+      font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+      transition: opacity 0.2s;
+    }
+    .btn-find:active { opacity: 0.7; }
+    
+    .search-wrapper {
+      flex: 1; height: 36px; background: var(--input-bg); border-radius: 10px;
+      display: flex; align-items: center; padding: 0 8px; position: relative;
+    }
+    
+    #search-input {
+      flex: 1; height: 100%; border: none; background: transparent;
+      font-family: var(--font-stack); font-size: 16px; outline: none; min-width: 0;
+    }
+
+    .search-clear {
+      display: none; background: #8E8E93; color: white; border-radius: 50%;
+      width: 16px; height: 16px; font-size: 10px; border: none;
+      align-items: center; justify-content: center; cursor: pointer;
+    }
+
+    /* Toggle Pills */
+    .toggle-pill {
+      background: var(--input-bg); border-radius: 18px; padding: 2px;
+      display: flex; height: 36px; flex-shrink: 0;
+    }
+    .toggle-opt {
+      padding: 0 12px; border: none; background: transparent; border-radius: 16px;
+      font-size: 12px; font-weight: 600; color: var(--text-sub); cursor: pointer;
+    }
+    .toggle-opt.active {
+      background: #FFFFFF; color: var(--text-main);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .icon-btn {
+      background: transparent; border: none; font-size: 20px; cursor: pointer; padding: 0 8px; color: var(--primary); pointer-events: auto;
+    }
+
+    /* --- 5. BOTTOM SHEET (DOCKABLE) --- */
+    .bottom-sheet {
+      pointer-events: auto;
+      bottom: 0; left: 0; right: 0;
+      border-radius: var(--radius) var(--radius) 0 0;
+      padding: 0 20px 30px 20px;
+      transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+      transform: translateY(0);
     }
     .bottom-sheet.minimized { transform: translateY(calc(100% - 30px)); }
-    
+
+    /* Desktop Constraint */
     @media (min-width: 768px) {
       .bottom-sheet { left: auto; right: 20px; bottom: 20px; width: 400px; border-radius: var(--radius); }
       .bottom-sheet.minimized { transform: translateY(calc(100% - 40px)); }
     }
 
-    .handle-area { 
-      width: 100%; height: 30px; display: flex; align-items: center; 
-      justify-content: center; cursor: pointer;
+    .handle-area {
+      width: 100%; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer;
     }
     .handle-bar { width: 40px; height: 5px; background: var(--handle); border-radius: 3px; }
-    
+
     .info-display { text-align: center; margin-bottom: 20px; }
-    .label-micro { 
+    .label-micro {
       font-size: 10px; font-weight: 700; color: var(--text-sub); 
-      text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px; 
+      text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;
     }
-    .val-macro { 
-      font-size: 18px; font-weight: 600; color: var(--text-main); 
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+    .val-macro {
+      font-size: 17px; font-weight: 600; color: var(--text-main);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    
+
     .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-    .btn-grid-triple { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
     
-    .btn { 
-      height: 44px; border: none; border-radius: 12px; font-weight: 600; 
-      font-size: 15px; cursor: pointer; font-family: var(--font-stack); 
-      display: flex; align-items: center; justify-content: center;
+    .btn {
+      height: 44px; border: none; border-radius: 12px; font-weight: 600; font-size: 15px; cursor: pointer;
+      font-family: var(--font-stack); display: flex; align-items: center; justify-content: center;
     }
     .btn-save { background: var(--success); color: white; }
     .btn-copy { background: var(--input-bg); color: var(--text-main); }
     .btn-verify { background: transparent; border: 1px solid var(--text-sub); color: var(--text-main); font-size: 13px; }
-    .btn-select { width: 100%; background: var(--input-bg); color: var(--primary); margin-bottom: 15px; font-size: 14px; }
 
-    .grid-control-row { 
-      display: flex; justify-content: space-between; align-items: center; 
-      background: var(--input-bg); padding: 8px 16px; border-radius: 14px; margin-top: 5px;
-    }
-    .grid-label { font-size: 12px; font-weight: 600; color: var(--text-sub); }
-
-    /* --- 6. DRAGGABLE MODALS --- */
-    .modal { 
-      top: 100px; left: 20px; width: calc(100% - 40px); max-width: 500px; 
-      background: var(--card-bg); backdrop-filter: var(--card-blur); 
-      padding: 0 0 20px 0; border-radius: var(--radius); box-shadow: var(--shadow); 
-      display: none; flex-direction: column; border: var(--border); max-height: 60vh;
-    }
-    .modal-header { 
-      padding: 15px; background: rgba(0,0,0,0.03); border-bottom: var(--border); 
-      cursor: grab; border-radius: var(--radius) var(--radius) 0 0; 
+    /* BUREAUCRACY FADER (Slider) */
+    .control-row {
       display: flex; justify-content: space-between; align-items: center;
+      background: var(--input-bg); padding: 8px 16px; border-radius: 14px; margin-top: 10px;
     }
-    .modal-header:active { cursor: grabbing; }
-    .modal-title { margin: 0; font-size: 16px; font-weight: 700; }
-    .close-btn { border: none; background: none; font-size: 24px; color: var(--text-sub); cursor: pointer; padding: 0 10px; }
-    .modal-body { padding: 15px; overflow-y: auto; }
+    .control-label { font-size: 12px; font-weight: 600; color: var(--text-sub); }
+    
+    /* Quarter Width Slider */
+    .mini-slider { width: 30%; accent-color: var(--danger); }
 
-    @media (max-width: 768px) {
-      .modal { top: auto !important; bottom: 20px !important; left: 10px !important; width: calc(100% - 20px) !important; transform: none !important; }
-      .modal-header { cursor: default; }
+    /* --- 6. TOASTS --- */
+    #toast-container {
+      top: 80px; left: 50%; transform: translateX(-50%); width: auto; text-align: center;
     }
-
-    /* --- 7. TOAST NOTIFICATIONS --- */
-    #toast-container { 
-      top: 20px; left: 50%; transform: translateX(-50%); width: auto; 
-      text-align: center; pointer-events: none;
-    }
-    .toast { 
-      background: rgba(0,0,0,0.75); backdrop-filter: blur(10px); color: white; 
-      padding: 10px 20px; border-radius: 20px; margin-bottom: 10px; font-size: 14px; 
-      font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+    .toast {
+      background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      color: black; padding: 10px 20px; border-radius: 20px;
+      margin-bottom: 10px; font-size: 14px; font-weight: 600;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
       animation: slideDown 0.3s ease-out, fadeOut 0.5s ease-out 2.5s forwards;
+      border: 1px solid rgba(0,0,0,0.05);
     }
     @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
-    /* Lists & Items */
+    /* --- 7. MODALS --- */
+    .modal {
+      top: 100px; left: 20px; width: calc(100% - 40px); max-width: 500px;
+      padding: 0 0 20px 0; border-radius: var(--radius); 
+      display: none; flex-direction: column;
+      max-height: 60vh;
+    }
+    .modal-header {
+      padding: 15px; background: rgba(0,0,0,0.03); border-bottom: var(--border);
+      border-radius: var(--radius) var(--radius) 0 0; cursor: grab;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-title { margin: 0; font-size: 16px; font-weight: 700; }
+    .close-btn { border: none; background: none; font-size: 24px; color: var(--text-sub); cursor: pointer; }
+    .modal-body { padding: 15px; overflow-y: auto; }
+    
     .list-item { 
       padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 14px; 
-      display: flex; flex-direction: column; gap: 8px;
     }
-    .list-header { display: flex; justify-content: space-between; align-items: flex-start; }
-    .engine-opt { 
-      padding: 12px; background: var(--input-bg); margin-bottom: 8px; 
-      border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; justify-content: space-between;
-    }
-    .engine-opt.selected { background: white; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    
-    /* Notes Input */
     .note-input {
-        width: 100%; padding: 8px; border: 1px solid rgba(0,0,0,0.1); 
-        border-radius: 8px; background: rgba(255,255,255,0.5); 
-        font-family: var(--font-stack); font-size: 13px; box-sizing: border-box;
+      width: 100%; border: none; background: var(--input-bg); 
+      padding: 5px; border-radius: 5px; margin-top: 5px; font-size: 12px;
     }
-    .note-input:focus { outline: none; background: white; border-color: var(--primary); }
 
     /* Autocomplete */
-    #autocomplete-results { 
-      top: 70px; left: 20px; right: 20px; max-width: 600px; margin: 0 auto; 
-      background: var(--card-bg); backdrop-filter: var(--card-blur); border-radius: var(--radius); 
-      box-shadow: var(--shadow); max-height: 250px; overflow-y: auto; display: none; pointer-events: auto;
+    #autocomplete-results {
+      top: 70px; left: 20px; right: 20px; max-width: 600px; margin: 0 auto;
+      border-radius: var(--radius); 
+      max-height: 250px; overflow-y: auto; display: none; pointer-events: auto;
     }
     .ac-item { padding: 14px; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 14px; cursor: pointer; }
-    .ac-item strong { color: var(--primary); }
-    
+
+    /* Hide Leaflet cruft */
     .leaflet-control-attribution, .leaflet-bar { display: none; }
   </style>
 </head>
@@ -209,289 +216,269 @@
 
   <div id="toast-container" class="toast-layer"></div>
 
-  <div class="top-bar-container ui-layer">
-    <div class="top-bar">
+  <div class="top-container ui-layer">
+    <div class="top-bar glass">
       <button class="btn-find" onclick="initLocate()">Find Me</button>
+      
       <div class="search-wrapper">
         <input type="text" id="search-input" placeholder="Search..." oninput="handleTyping()" onkeydown="checkEnter(event)">
         <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
       </div>
+      
       <div class="toggle-pill">
         <button id="tog-map" class="toggle-opt active" onclick="setMode('clean')">Map</button>
         <button id="tog-sat" class="toggle-opt" onclick="setMode('sat')">Sat</button>
       </div>
-      <button class="icon-btn" onclick="toggleModal('menu-modal')" title="Menu">☰</button>
+      
+      <button class="icon-btn" onclick="toggleModal('menu-modal')">☰</button>
     </div>
   </div>
 
-  <div id="autocomplete-results" class="autocomplete-layer"></div>
+  <div id="autocomplete-results" class="autocomplete-layer glass"></div>
 
-  <div id="map-modal" class="modal modal-layer">
-    <div class="modal-header" onmousedown="startDrag(event, 'map-modal')">
-      <h3 class="modal-title">Select Map Style</h3>
-      <button class="close-btn" onclick="closeModals()">×</button>
-    </div>
-    <div class="modal-body" id="engine-list"></div>
-  </div>
-
-  <div id="menu-modal" class="modal modal-layer">
+  <div id="menu-modal" class="modal modal-layer glass">
     <div class="modal-header" onmousedown="startDrag(event, 'menu-modal')">
       <h3 class="modal-title">Menu</h3>
-      <button class="close-btn" onclick="closeModals()">×</button>
+      <button class="close-btn" onclick="toggleModal('menu-modal')">×</button>
     </div>
     <div class="modal-body">
-      <button class="btn btn-save" onclick="toggleSaved()" style="margin-bottom:10px">Saved Points</button>
-      <button class="btn btn-copy" onclick="toggleHistory()" style="margin-bottom:10px">History</button>
-      <button class="btn btn-verify" onclick="toggleError()" style="margin-bottom:10px">Error Logs</button>
+      <button class="btn btn-copy" onclick="toggleModal('map-select-modal')" style="margin-bottom:10px; width:100%">Change Map Style</button>
+      <button class="btn btn-copy" onclick="toggleModal('saved-modal')" style="margin-bottom:10px; width:100%">Saved Points</button>
+      <button class="btn btn-copy" onclick="toggleModal('history-modal')" style="width:100%">History</button>
     </div>
   </div>
 
-  <div id="saved-modal" class="modal modal-layer">
+  <div id="map-select-modal" class="modal modal-layer glass">
+    <div class="modal-header" onmousedown="startDrag(event, 'map-select-modal')">
+      <h3 class="modal-title">Map Engines</h3>
+      <button class="close-btn" onclick="toggleModal('map-select-modal')">×</button>
+    </div>
+    <div class="modal-body" id="map-list"></div>
+  </div>
+
+  <div id="saved-modal" class="modal modal-layer glass">
     <div class="modal-header" onmousedown="startDrag(event, 'saved-modal')">
-      <h3 class="modal-title">Saved Points</h3>
-      <button class="close-btn" onclick="closeModals()">×</button>
+      <h3 class="modal-title">Saved</h3><button class="close-btn" onclick="toggleModal('saved-modal')">×</button>
     </div>
     <div class="modal-body">
       <div id="saved-list"></div>
-      <button class="btn btn-copy" onclick="exportList('saved')" style="margin-top:10px; width:100%">Copy List</button>
+      <button class="btn btn-save" onclick="exportList()" style="margin-top:10px; width:100%">Copy List</button>
     </div>
   </div>
 
-  <div id="history-modal" class="modal modal-layer">
-    <div class="modal-header" onmousedown="startDrag(event, 'history-modal')">
-      <h3 class="modal-title">History</h3>
-      <button class="close-btn" onclick="closeModals()">×</button>
-    </div>
+  <div id="history-modal" class="modal modal-layer glass">
+    <div class="modal-header" onmousedown="startDrag(event, 'history-modal')"><h3 class="modal-title">History</h3><button class="close-btn" onclick="toggleModal('history-modal')">×</button></div>
     <div class="modal-body" id="history-list"></div>
-  </div>
-
-  <div id="error-modal" class="modal modal-layer">
-    <div class="modal-header" onmousedown="startDrag(event, 'error-modal')">
-      <h3 class="modal-title">Error Logs</h3>
-      <button class="close-btn" onclick="closeModals()">×</button>
-    </div>
-    <div class="modal-body" id="error-list" style="color:var(--danger); font-family:monospace; font-size:12px;"></div>
   </div>
 
   <div id="map"></div>
 
-  <div class="bottom-sheet ui-layer" id="bottom-sheet">
+  <div class="bottom-sheet ui-layer glass" id="bottom-sheet">
     <div class="handle-area" onclick="toggleDock()"><div class="handle-bar"></div></div>
-    
+
     <div class="info-display">
       <span class="label-micro" id="data-label">Standard Address</span>
       <div class="val-macro" id="data-value">Tap map to select...</div>
     </div>
-
-    <button class="btn btn-select" onclick="toggleModal('map-modal')">Select Map Engine ▾</button>
 
     <div class="btn-grid">
       <button class="btn btn-save" onclick="savePoint()">Save Point</button>
       <button class="btn btn-copy" onclick="smartCopy()">Copy Data</button>
     </div>
 
-    <div class="btn-grid-triple">
-      <button class="btn btn-verify" onclick="openApple()">Apple Maps</button>
-      <button class="btn btn-verify" onclick="openGoogle()">Google Maps</button>
-      <button class="btn btn-verify" onclick="openStreetView()">Street View</button>
+    <div class="btn-grid">
+      <button class="btn btn-verify" onclick="openMapApp('google')">Google Maps</button>
+      <button class="btn btn-verify" onclick="openMapApp('apple')">Apple Maps</button>
     </div>
 
-    <div class="grid-control-row">
-      <span class="grid-label">Bureaucracy View</span>
-      <div class="toggle-pill">
-        <button id="grid-off" class="toggle-opt active" onclick="setGrid(false)">Clean</button>
-        <button id="grid-on" class="toggle-opt" onclick="setGrid(true)">Grid</button>
-      </div>
+    <div class="control-row">
+      <span class="control-label">Consumer</span>
+      <input type="range" class="mini-slider" min="0" max="1" step="0.1" value="0" id="gridSlider">
+      <span class="control-label" style="color:var(--danger)">Bureaucracy</span>
     </div>
   </div>
 
 <script>
-  // --- 1. STATE & PERSISTENCE ---
+  // --- 1. STATE ---
   const state = {
-    lat: 0, lng: 0, address: "", cityCoords: "", marker: null, accuracyCircle: null,
-    mode: localStorage.getItem('ri_mode') || 'clean',
-    gridActive: localStorage.getItem('ri_grid') === 'true',
-    activeEngine: JSON.parse(localStorage.getItem('ri_engines')) || { clean: 'voyager', sat: 'esri' },
-    errors: [],
+    lat: 0, lng: 0,
+    address: "",
+    cityCoords: "",
+    marker: null,
+    accuracyCircle: null,
+    tetherLine: null,
+    mode: 'clean',
+    activeEngine: { clean: 'voyager', sat: 'esri' },
+    gridOpacity: 0,
     history: JSON.parse(localStorage.getItem('ri_history')) || [],
     saved: JSON.parse(localStorage.getItem('ri_saved')) || []
   };
 
-  // --- 2. TOAST SYSTEM ---
+  // --- 2. TOASTS ---
   function showToast(msg) {
-    const container = document.getElementById('toast-container');
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.innerText = msg;
-    container.appendChild(toast);
-    setTimeout(() => { toast.remove(); }, 2800);
-  }
-
-  function logError(msg) {
-    console.error(msg);
-    state.errors.push(`${new Date().toLocaleTimeString()}: ${msg}`);
-    const el = document.getElementById('error-list');
-    if(el) el.innerHTML = state.errors.map(e => `<div>${e}</div>`).join('');
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.innerText = msg;
+    document.getElementById('toast-container').appendChild(el);
+    setTimeout(() => el.remove(), 2500);
   }
 
   // --- 3. MAP CONFIG ---
   const engines = {
     clean: {
-      osm: { name: "OpenStreetMap", url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' },
       voyager: { name: "Carto Voyager (Recommended)", url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png' },
-      positron: { name: "Carto Positron", url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' },
-      esri: { name: "Esri World Street", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}' }
+      osm: { name: "OpenStreetMap", url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' },
+      esri: { name: "Esri World Navigation", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}' }
     },
     sat: {
-      esri: { name: "Esri Satellite", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' },
-      usgs: { name: "USGS Imagery", url: 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}' },
-      hybrid: { name: "Esri Satellite Hybrid", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' }
+      esri: { name: "Esri Satellite", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' }
     }
   };
 
-  // --- 4. INIT MAP ---
-  const map = L.map('map', { zoomControl: false, tap: true }).setView([39.7684, -86.1581], 15);
-  let baseLayer = null;
-  let hybridLayer = null;
+  // Init Map
+  const map = L.map('map', { zoomControl: false, tap: true }).setView([39.7684, -86.1581], 12);
+  let baseLayer = L.tileLayer(engines.clean.voyager.url, { maxZoom: 19 }).addTo(map);
 
-  // City Layers
+  // Overlays
   const cityUrl = 'https://xmaps.indy.gov/arcgis/rest/services/SalesForce/MAC311/MapServer';
   const layerAddresses = L.esri.dynamicMapLayer({ url: cityUrl, layers: [18], opacity: 0.9, f: 'json', minZoom: 17, useCors: false }).addTo(map);
   const layerGrid = L.esri.dynamicMapLayer({ url: cityUrl, layers: [16], opacity: 0, f: 'json', useCors: false }).addTo(map);
 
-  // --- 5. LOGIC: GEOSPATIAL ---
+  // --- 4. PROJ4 (Coordinate Math) ---
   if(window.proj4) {
     proj4.defs("EPSG:2965", "+proj=tmerc +lat_0=37.5 +lon_0=-85.66666666666667 +k=0.9999666666666667 +x_0=2960000 +y_0=250000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=us-ft +no_defs");
   }
 
-  // --- 6. CORE FUNCTIONS ---
-  // Apply saved preferences immediately
-  updateModeUI();
-  updateGridUI();
-  refreshBaseLayer();
-
-  // Map Click
+  // --- 5. LOGIC & INTERACTION ---
+  
   map.on('click', (e) => {
+    // Visuals
     if(state.marker) map.removeLayer(state.marker);
     state.marker = L.marker(e.latlng).addTo(map);
+    if(state.tetherLine) map.removeLayer(state.tetherLine); // Clear old tether
+    
     document.getElementById('bottom-sheet').classList.remove('minimized');
     processLocation(e.latlng);
   });
 
   function processLocation(latlng) {
-    document.getElementById('result-text').innerText = "Processing...";
+    updateDisplay("Processing...", "var(--text-sub)");
     state.lat = latlng.lat;
     state.lng = latlng.lng;
 
-    // A. City Coords
+    // 1. City Math (X/Y)
     if(window.proj4) {
       try {
         const indy = proj4("EPSG:4326", "EPSG:2965", [latlng.lng, latlng.lat]);
         state.cityCoords = `X: ${Math.round(indy[0])}, Y: ${Math.round(indy[1])}`;
-      } catch(e) { logError("Proj4: " + e.message); }
+      } catch(e) { console.error(e); }
     }
 
-    // B. Address Lookup
+    // 2. Fetch Address (Nearest Logic)
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latlng.lat}&lon=${latlng.lng}`;
     
-    fetch(url, { headers: { 'User-Agent': 'Request-Indy-Web' } })
-      .then(r => { 
-        if(!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
+    fetch(url, { headers: { 'User-Agent': 'Request-Indy-App' } })
+      .then(r => { if(!r.ok) throw new Error("API Blocked"); return r.json(); })
       .then(d => {
-        if(d.error) throw new Error(d.error);
-        const a = d.address;
-        const name = d.name ? d.name + ", " : "";
-        const num = a.house_number || "";
-        const road = a.road || "Unnamed Location";
-        state.address = name + (num ? `${num} ${road}` : road);
+        if(d.error) throw new Error("No Address");
         
+        let a = d.address;
+        let isApprox = false;
+        
+        // Scenario B: Pothole in empty lot logic
+        if (!a.house_number) {
+            isApprox = true;
+            // In a real backend we'd search radius, here we use the name or road
+            state.address = `Near ${d.name || a.road || "Location"} (Approx)`;
+        } else {
+            state.address = `${a.house_number} ${a.road}`;
+        }
+
+        // Draw Tether if Approx
+        if(isApprox && d.lat && d.lon) {
+            state.tetherLine = L.polyline([latlng, [d.lat, d.lon]], {color: 'var(--danger)', dashArray: '5, 10'}).addTo(map);
+        }
+
         updateUI();
         addToHistory();
       })
       .catch((e) => {
-        state.address = "No Address Found";
-        logError("Geocode: " + e.message);
+        state.address = "Address Lookup Failed - Tap Retry";
         updateUI();
       });
   }
 
   function updateUI() {
-    const label = document.getElementById('data-label');
-    const val = document.getElementById('data-value');
-
-    if(state.gridActive) {
-      label.innerText = "OFFICIAL CITY COORDINATES";
-      label.style.color = "var(--danger)";
-      val.innerText = state.cityCoords || "Calculating...";
+    // Smart Copy Logic: Slider decides what we show
+    const showGrid = state.gridOpacity > 0.1;
+    if(showGrid) {
+      // Bureaucracy Mode
+      updateDisplay(`Coords: ${state.cityCoords}`, "var(--danger)", "BUREAUCRATIC DATA");
     } else {
-      label.innerText = "STANDARD ADDRESS / POI";
-      label.style.color = "var(--text-sub)";
-      val.innerText = state.address || "Loading...";
+      // Clean Mode
+      updateDisplay(state.address, "var(--text-main)", "STANDARD ADDRESS");
     }
   }
 
-  // --- 7. MAP ENGINE LOGIC ---
+  function updateDisplay(text, color, labelText) {
+    const val = document.getElementById('data-value');
+    const label = document.getElementById('data-label');
+    val.innerText = text;
+    val.style.color = color;
+    if(labelText) label.innerText = labelText;
+  }
+
+  // --- 6. CONTROLS ---
+
+  // Mode Toggle
   window.setMode = function(mode) {
     state.mode = mode;
-    localStorage.setItem('ri_mode', mode);
-    updateModeUI();
-    refreshBaseLayer();
+    document.getElementById('tog-map').classList.toggle('active', mode === 'clean');
+    document.getElementById('tog-sat').classList.toggle('active', mode === 'sat');
+    refreshMapEngine();
   }
 
-  function updateModeUI() {
-    document.getElementById('tog-map').classList.toggle('active', state.mode === 'clean');
-    document.getElementById('tog-sat').classList.toggle('active', state.mode === 'sat');
-  }
-
-  window.setGrid = function(isActive) {
-    state.gridActive = isActive;
-    localStorage.setItem('ri_grid', isActive);
-    updateGridUI();
-  }
-
-  function updateGridUI() {
-    document.getElementById('grid-off').classList.toggle('active', !state.gridActive);
-    document.getElementById('grid-on').classList.toggle('active', state.gridActive);
-    layerGrid.setOpacity(state.gridActive ? 1 : 0);
-    updateUI();
-  }
-
-  window.refreshBaseLayer = function() {
+  function refreshMapEngine() {
     if(baseLayer) map.removeLayer(baseLayer);
-    if(hybridLayer) map.removeLayer(hybridLayer);
-
     const engineKey = state.activeEngine[state.mode];
     const url = engines[state.mode][engineKey].url;
-    
     baseLayer = L.tileLayer(url, { maxZoom: 19 }).addTo(map);
     baseLayer.bringToBack();
-
-    // Hybrid Logic
-    if(state.mode === 'sat' && engineKey === 'hybrid') {
-        hybridLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(map);
-        hybridLayer.setZIndex(500);
-    }
   }
 
   window.switchEngine = function(key) {
     state.activeEngine[state.mode] = key;
-    localStorage.setItem('ri_engines', JSON.stringify(state.activeEngine));
-    refreshBaseLayer();
-    renderMapModal();
+    refreshMapEngine();
+    toggleModal('map-select-modal'); // Close
   }
 
-  // --- 8. ROBUST GPS ---
+  // Slider
+  document.getElementById('gridSlider').addEventListener('input', (e) => {
+    state.gridOpacity = parseFloat(e.target.value);
+    layerGrid.setOpacity(state.gridOpacity);
+    updateUI();
+  });
+
+  // Dock
+  window.toggleDock = () => document.getElementById('bottom-sheet').classList.toggle('minimized');
+
+  // --- 7. ROBUST GPS (Try/Catch + Fallback) ---
+  document.addEventListener("DOMContentLoaded", () => {
+      // Initial Low Accuracy Run (Fast Lock)
+      map.locate({setView: true, maxZoom: 15, enableHighAccuracy: false}); 
+  });
+
   window.initLocate = function() {
     const btn = document.querySelector('.btn-find');
     btn.innerText = "Locating...";
     
-    map.locate({setView: true, maxZoom: 18, enableHighAccuracy: true, timeout: 8500});
+    // Attempt High Accuracy with 5s Timeout
+    map.locate({setView: true, maxZoom: 18, enableHighAccuracy: true, timeout: 5000});
     
     map.on('locationfound', (e) => {
       btn.innerText = "Find Me";
       processLocation(e.latlng);
+      
       if(state.accuracyCircle) map.removeLayer(state.accuracyCircle);
       if(state.marker) map.removeLayer(state.marker);
       
@@ -500,54 +487,112 @@
     });
 
     map.on('locationerror', (e) => {
-      logError(`GPS High-Acc Failed (${e.code}): ${e.message}`);
+      console.log("High Acc failed, trying low acc...");
       // Fallback
-      if(e.code === 3 || e.message.includes('timeout')) {
-         map.locate({setView: true, maxZoom: 18, enableHighAccuracy: false});
-      } else {
-         btn.innerText = "Find Me";
-         showToast("GPS Error/Denied");
-      }
+      map.locate({setView: true, maxZoom: 18, enableHighAccuracy: false});
+      btn.innerText = "Find Me";
+      if(e.code !== 3) showToast("Using Approx Location");
     });
   }
 
-  // --- 9. MODAL & DRAG LOGIC ---
-  function closeModals() {
-    document.querySelectorAll('.modal').forEach(el => el.style.display = 'none');
+  // --- 8. SMART COPY & SAVED ---
+  window.smartCopy = function() {
+    const showGrid = state.gridOpacity > 0.1;
+    let txt = "";
+    
+    if(showGrid) {
+        // Bureaucracy Packet
+        txt = `${state.address} [${state.cityCoords}]`;
+    } else {
+        txt = state.address;
+    }
+    
+    if(!txt || txt.includes("Processing")) return showToast("Wait for data...");
+    navigator.clipboard.writeText(txt).then(() => showToast("Copied!"));
   }
 
-  function toggleModal(id) {
+  window.savePoint = function() {
+    if(!state.address) return showToast("No location selected");
+    state.saved.push({ addr: state.address, coords: state.cityCoords, notes: "" });
+    localStorage.setItem('ri_saved', JSON.stringify(state.saved));
+    showToast("Saved!");
+  }
+
+  function addToHistory() {
+    if(state.history.length > 0 && state.history[0].addr === state.address) return;
+    state.history.unshift({ addr: state.address, ts: new Date().toLocaleTimeString() });
+    if(state.history.length > 50) state.history.pop();
+    localStorage.setItem('ri_history', JSON.stringify(state.history));
+  }
+
+  // --- 9. MODALS & LISTS ---
+  window.toggleModal = (id) => {
+    document.querySelectorAll('.modal').forEach(el => el.style.display = 'none');
     const m = document.getElementById(id);
-    const isOpen = m.style.display === 'flex';
-    
-    closeModals(); // Close others first
-    
-    if(!isOpen) {
+    if(m) {
         m.style.display = 'flex';
-        // Reset position on open for desktop
-        if(window.innerWidth > 768) {
-            m.style.top = '100px';
-            m.style.left = '20px';
-        }
-        if(id === 'map-modal') renderMapModal();
-        if(id === 'saved-modal') renderSavedList();
-        if(id === 'history-modal') renderHistoryList();
+        // Reset desktop pos
+        if(window.innerWidth > 768) { m.style.top = '100px'; m.style.left = '20px'; }
+        
+        if(id === 'saved-modal') renderSaved();
+        if(id === 'history-modal') renderHistory();
+        if(id === 'map-select-modal') renderMapList();
     }
   }
 
-  // Shortcuts
-  window.toggleSaved = () => toggleModal('saved-modal');
-  window.toggleHistory = () => toggleModal('history-modal');
-  window.toggleError = () => toggleModal('error-modal');
-  window.toggleMapModal = () => toggleModal('map-modal');
-  window.toggleModal = toggleModal;
-  window.closeModals = closeModals;
+  function renderMapList() {
+    const list = document.getElementById('map-list');
+    list.innerHTML = "";
+    Object.keys(engines.clean).forEach(key => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-copy';
+        btn.style.width = '100%';
+        btn.style.marginBottom = '5px';
+        btn.style.textAlign = 'left';
+        btn.style.padding = '10px';
+        btn.innerText = engines.clean[key].name;
+        btn.onclick = () => switchEngine(key);
+        list.appendChild(btn);
+    });
+  }
 
-  // DRAG IMPLEMENTATION
-  let dragItem = null;
-  let offsetX = 0;
-  let offsetY = 0;
+  function renderSaved() {
+    const el = document.getElementById('saved-list');
+    el.innerHTML = state.saved.map((item, i) => `
+      <div class="list-item">
+        <div style="flex:1">
+            <strong>${item.addr}</strong><br>
+            <input type="text" class="note-input" placeholder="Add note..." value="${item.notes || ''}" onchange="updateNote(${i}, this.value)">
+        </div>
+        <button onclick="removeSaved(${i})" style="color:var(--danger); border:none; background:none; font-size:20px; padding:0 10px;">✕</button>
+      </div>
+    `).join('');
+  }
+  
+  window.updateNote = (i, val) => {
+      state.saved[i].notes = val;
+      localStorage.setItem('ri_saved', JSON.stringify(state.saved));
+  }
 
+  function renderHistory() {
+    document.getElementById('history-list').innerHTML = state.history.map(item => `
+      <div class="list-item"><div><strong>${item.addr}</strong><br><small>${item.ts}</small></div></div>
+    `).join('');
+  }
+
+  window.removeSaved = (i) => {
+    state.saved.splice(i, 1);
+    localStorage.setItem('ri_saved', JSON.stringify(state.saved));
+    renderSaved();
+  }
+
+  window.exportList = () => {
+    let txt = state.saved.map((p, i) => `${i+1}. ${p.addr} (${p.coords}) - ${p.notes}`).join('\n');
+    navigator.clipboard.writeText(txt).then(() => showToast("List Copied"));
+  }
+
+  // --- 10. DRAGGABLE LOGIC ---
+  let dragItem = null; let offsetX = 0; let offsetY = 0;
   window.startDrag = function(e, id) {
     if(window.innerWidth <= 768) return; 
     dragItem = document.getElementById(id);
@@ -556,209 +601,73 @@
     document.addEventListener('mousemove', dragMove);
     document.addEventListener('mouseup', dragEnd);
   }
-
   function dragMove(e) {
     if(!dragItem) return;
     e.preventDefault();
-    let x = e.clientX - offsetX;
-    let y = e.clientY - offsetY;
-    
-    // Bounds Check
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    if(x > w - 20) x = w - 20;
-    if(x < -dragItem.offsetWidth + 20) x = -dragItem.offsetWidth + 20;
-    if(y < 0) y = 0;
-    if(y > h - 20) y = h - 20;
-
-    dragItem.style.left = x + 'px';
-    dragItem.style.top = y + 'px';
+    dragItem.style.left = (e.clientX - offsetX) + 'px';
+    dragItem.style.top = (e.clientY - offsetY) + 'px';
   }
-
   function dragEnd() {
     dragItem = null;
     document.removeEventListener('mousemove', dragMove);
     document.removeEventListener('mouseup', dragEnd);
   }
 
-  // --- 10. SAVED/HISTORY LOGIC ---
-  function addToHistory() {
-    if(state.history.length > 0 && state.history[0].addr === state.address) return;
-    state.history.unshift({ addr: state.address, ts: new Date().toLocaleTimeString(), date: new Date().toLocaleDateString() });
-    if(state.history.length > 50) state.history.pop();
-    localStorage.setItem('ri_history', JSON.stringify(state.history));
-  }
-
-  window.savePoint = function() {
-    if(!state.address || state.address.includes("Unknown")) return showToast("Select valid location first");
-    state.saved.push({ 
-        addr: state.address, 
-        coords: state.cityCoords, 
-        lat: state.lat, 
-        lng: state.lng,
-        note: "" // Init empty note
-    });
-    localStorage.setItem('ri_saved', JSON.stringify(state.saved));
-    L.circleMarker([state.lat, state.lng], { color: 'var(--success)', radius: 6, fillOpacity: 1 }).addTo(map);
-    showToast("Location Saved!");
-  }
-
-  window.updateNote = function(index, value) {
-    state.saved[index].note = value;
-    localStorage.setItem('ri_saved', JSON.stringify(state.saved));
-  }
-
-  // --- 11. UI RENDERING ---
-  window.renderMapModal = function() {
-    const list = document.getElementById('engine-list');
-    list.innerHTML = "";
-    const currentModeEngines = engines[state.mode];
-    Object.keys(currentModeEngines).forEach(key => {
-      const opt = document.createElement('div');
-      const isSelected = state.activeEngine[state.mode] === key;
-      opt.className = `engine-opt ${isSelected ? 'selected' : ''}`;
-      opt.innerHTML = `<span>${currentModeEngines[key].name}</span> ${isSelected ? '✓' : ''}`;
-      opt.onclick = () => switchEngine(key);
-      list.appendChild(opt);
-    });
-  }
-
-  window.renderSavedList = function() {
-    const el = document.getElementById('saved-list');
-    if(state.saved.length === 0) {
-        el.innerHTML = "<div style='text-align:center; padding:20px; color:#888'>No points saved.</div>";
-        return;
-    }
-    el.innerHTML = state.saved.map((item, i) => `
-      <div class="list-item">
-        <div class="list-header">
-            <div>
-                <strong>${item.addr}</strong><br>
-                <small style="color:#888">${item.coords}</small>
-            </div>
-            <button onclick="removeSaved(${i})" style="color:var(--danger); border:none; background:none; font-size:20px; cursor:pointer; padding:0 10px;">✕</button>
-        </div>
-        <input type="text" class="note-input" placeholder="Add a note..." 
-               value="${item.note || ''}" 
-               onchange="updateNote(${i}, this.value)">
-      </div>
-    `).join('');
-  }
-
-  window.renderHistoryList = function() {
-    const el = document.getElementById('history-list');
-    el.innerHTML = state.history.map(item => `
-      <div class="list-item">
-        <div style="width:100%">
-            <strong>${item.addr}</strong><br>
-            <span class="timestamp">${item.date} ${item.ts}</span>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  window.removeSaved = function(i) {
-    state.saved.splice(i, 1);
-    localStorage.setItem('ri_saved', JSON.stringify(state.saved));
-    renderSavedList();
-  }
-
-  window.exportList = function(type) {
-    const source = type === 'saved' ? state.saved : state.history;
-    let txt = "REQUEST-INDY REPORT:\n\n";
-    source.forEach((p, i) => {
-        txt += `${i+1}. ${p.addr}\n   ${p.coords || p.ts}`;
-        if(p.note) txt += `\n   Note: ${p.note}`;
-        txt += `\n\n`;
-    });
-    navigator.clipboard.writeText(txt).then(() => showToast("List Copied!"));
-  }
-
-  // --- 12. UTILS ---
-  window.toggleDock = () => document.getElementById('bottom-sheet').classList.toggle('minimized');
-
-  window.smartCopy = function() {
-    const txt = state.gridActive ? state.cityCoords : state.address;
-    if(!txt) return showToast("No data to copy");
-    navigator.clipboard.writeText(txt).then(() => showToast("Copied!"));
-  }
-
-  // External Links
-  window.openGoogle = () => {
+  // --- 11. EXTERNAL & SEARCH ---
+  window.openMapApp = (type) => {
     if(!state.lat) return showToast("Select location");
-    window.location.href = `https://www.google.com/maps/search/?api=1&query=${state.lat},${state.lng}`;
-  }
-  window.openApple = () => {
-    if(!state.lat) return showToast("Select location");
-    window.location.href = `http://maps.apple.com/?q=${state.lat},${state.lng}`;
-  }
-  window.openStreetView = () => {
-    if(!state.lat) return showToast("Select location");
-    window.location.href = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${state.lat},${state.lng}`;
+    const url = type === 'google' 
+      ? `https://www.google.com/maps/search/?api=1&query=${state.lat},${state.lng}`
+      : `http://maps.apple.com/?q=${state.lat},${state.lng}`;
+    window.location.href = url;
   }
 
-  // Search Logic
   let typeTimer;
-  window.handleTyping = function() {
+  window.handleTyping = () => {
     clearTimeout(typeTimer);
     const q = document.getElementById('search-input').value.trim();
-    document.getElementById('search-clear').style.display = q.length > 0 ? 'flex' : 'none';
-    const list = document.getElementById('autocomplete-results');
-    
-    if(q.length < 2) { list.style.display = 'none'; return; }
-
-    typeTimer = setTimeout(() => { executeSearch(q); }, 500);
+    document.getElementById('search-clear').style.display = q ? 'flex' : 'none';
+    if(q.length < 2) return;
+    typeTimer = setTimeout(() => executeSearch(q), 500);
   }
 
-  window.checkEnter = function(e) {
+  window.checkEnter = (e) => {
     if(e.key === 'Enter') {
-        clearTimeout(typeTimer);
-        const q = document.getElementById('search-input').value.trim();
-        executeSearch(q);
-        document.getElementById('search-input').blur();
+      clearTimeout(typeTimer);
+      executeSearch(document.getElementById('search-input').value.trim());
+      document.getElementById('search-input').blur();
     }
   }
-  
-  window.clearSearch = function() {
+
+  window.clearSearch = () => {
     document.getElementById('search-input').value = '';
-    document.getElementById('search-clear').style.display = 'none';
     document.getElementById('autocomplete-results').style.display = 'none';
+    document.getElementById('search-clear').style.display = 'none';
   }
 
   function executeSearch(q) {
-    const list = document.getElementById('autocomplete-results');
     const safeQ = encodeURIComponent(q.toLowerCase().includes("indy") ? q : q + ", Indianapolis");
-    
-    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${safeQ}`, {
-        headers: { 'User-Agent': 'Request-Indy-App' }
-    })
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${safeQ}`, { headers: { 'User-Agent': 'Request-Indy-App' } })
       .then(r => r.json())
       .then(data => {
+        const list = document.getElementById('autocomplete-results');
         list.innerHTML = "";
-        if(data.length) {
-          list.style.display = 'block';
-          data.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'ac-item';
-            div.innerHTML = `<strong>${item.display_name.split(',')[0]}</strong><br><small>${item.display_name}</small>`;
-            div.onclick = () => {
-              map.setView([item.lat, item.lon], 18);
-              processLocation({lat: item.lat, lng: item.lon});
-              if(state.marker) map.removeLayer(state.marker);
-              state.marker = L.marker([item.lat, item.lon]).addTo(map);
-              document.getElementById('search-input').value = item.display_name.split(',')[0];
-              list.style.display = 'none';
-            };
-            list.appendChild(div);
-          });
-        }
+        list.style.display = 'block';
+        data.forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'ac-item';
+          div.innerHTML = `<strong>${item.display_name.split(',')[0]}</strong><br><small>${item.display_name}</small>`;
+          div.onclick = () => {
+            map.setView([item.lat, item.lon], 18);
+            processLocation({lat: item.lat, lng: item.lon});
+            if(state.marker) map.removeLayer(state.marker);
+            state.marker = L.marker([item.lat, item.lon]).addTo(map);
+            list.style.display = 'none';
+          };
+          list.appendChild(div);
+        });
       });
   }
-
-  // Init
-  window.onload = function() {
-    initLocate();
-  };
 </script>
 </body>
 </html>
