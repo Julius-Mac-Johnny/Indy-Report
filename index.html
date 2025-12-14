@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Request-Indy V7</title>
+  <title>Request-Indy V8</title>
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -11,18 +11,20 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
 
   <style>
-    /* --- 2. APPLE AESTHETIC SYSTEM --- */
+    /* --- 2. CSS VARIABLES (Strict Apple Aesthetic) --- */
     :root {
       --font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
       --bg-color: #F2F2F7;
-      --card-bg: rgba(255, 255, 255, 0.90); /* High Blur Base */
-      --card-blur: blur(25px);
+      /* Glassmorphism Variables */
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-blur: blur(20px);
+      
       --text-main: #000000;
       --text-sub: #8E8E93;
       --primary: #007AFF; 
       --danger: #FF3B30;  
       --success: #34C759; 
-      --radius: 22px;
+      --radius: 20px;
       --shadow: 0 8px 32px rgba(0,0,0,0.12);
       --border: 0.5px solid rgba(0,0,0,0.1);
       --input-bg: rgba(118, 118, 128, 0.12);
@@ -38,12 +40,21 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    /* Z-INDEX LAYERING */
+    /* Z-INDEX STRATEGY */
     #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 0; }
     .ui-layer { z-index: 1000; position: absolute; pointer-events: none; }
-    .modal-layer { z-index: 2000; position: absolute; }
+    .modal-layer { z-index: 2000; position: absolute; } 
     .toast-layer { z-index: 3000; position: fixed; pointer-events: none; }
     
+    /* GLASSMORPHISM UTILITY */
+    .glass {
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: var(--border);
+      box-shadow: var(--shadow);
+    }
+
     /* --- 4. TOP FLOATING BAR --- */
     .top-container {
       top: 16px; left: 0; right: 0; display: flex; justify-content: center;
@@ -51,8 +62,6 @@
     
     .top-bar {
       pointer-events: auto;
-      background: var(--card-bg); backdrop-filter: var(--card-blur);
-      border: var(--border); box-shadow: var(--shadow);
       height: 50px; border-radius: 25px;
       display: flex; align-items: center; padding: 0 6px; gap: 8px;
       width: 92%; max-width: 600px;
@@ -82,7 +91,7 @@
       align-items: center; justify-content: center; cursor: pointer;
     }
 
-    /* Segmented Control (Map/Sat) */
+    /* Toggle Pills */
     .toggle-pill {
       background: var(--input-bg); border-radius: 18px; padding: 2px;
       display: flex; height: 36px; flex-shrink: 0;
@@ -104,9 +113,7 @@
     .bottom-sheet {
       pointer-events: auto;
       bottom: 0; left: 0; right: 0;
-      background: var(--card-bg); backdrop-filter: var(--card-blur);
-      border-top: var(--border); border-radius: var(--radius) var(--radius) 0 0;
-      box-shadow: var(--shadow);
+      border-radius: var(--radius) var(--radius) 0 0;
       padding: 0 20px 30px 20px;
       transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
       transform: translateY(0);
@@ -130,7 +137,7 @@
       text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;
     }
     .val-macro {
-      font-size: 18px; font-weight: 600; color: var(--text-main);
+      font-size: 17px; font-weight: 600; color: var(--text-main);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
 
@@ -144,7 +151,7 @@
     .btn-copy { background: var(--input-bg); color: var(--text-main); }
     .btn-verify { background: transparent; border: 1px solid var(--text-sub); color: var(--text-main); font-size: 13px; }
 
-    /* GRID CONTROLS ROW */
+    /* BUREAUCRACY FADER (Slider) */
     .control-row {
       display: flex; justify-content: space-between; align-items: center;
       background: var(--input-bg); padding: 8px 16px; border-radius: 14px; margin-top: 10px;
@@ -152,19 +159,17 @@
     .control-label { font-size: 12px; font-weight: 600; color: var(--text-sub); }
     
     /* Quarter Width Slider */
-    .mini-slider {
-      width: 25%; accent-color: var(--danger);
-    }
+    .mini-slider { width: 30%; accent-color: var(--danger); }
 
     /* --- 6. TOASTS --- */
     #toast-container {
       top: 80px; left: 50%; transform: translateX(-50%); width: auto; text-align: center;
     }
     .toast {
-      background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
       color: black; padding: 10px 20px; border-radius: 20px;
       margin-bottom: 10px; font-size: 14px; font-weight: 600;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
       animation: slideDown 0.3s ease-out, fadeOut 0.5s ease-out 2.5s forwards;
       border: 1px solid rgba(0,0,0,0.05);
     }
@@ -174,14 +179,13 @@
     /* --- 7. MODALS --- */
     .modal {
       top: 100px; left: 20px; width: calc(100% - 40px); max-width: 500px;
-      background: var(--card-bg); backdrop-filter: var(--card-blur);
-      padding: 0 0 20px 0; border-radius: var(--radius); box-shadow: var(--shadow);
-      display: none; flex-direction: column; border: var(--border);
+      padding: 0 0 20px 0; border-radius: var(--radius); 
+      display: none; flex-direction: column;
       max-height: 60vh;
     }
     .modal-header {
       padding: 15px; background: rgba(0,0,0,0.03); border-bottom: var(--border);
-      border-radius: var(--radius) var(--radius) 0 0;
+      border-radius: var(--radius) var(--radius) 0 0; cursor: grab;
       display: flex; justify-content: space-between; align-items: center;
     }
     .modal-title { margin: 0; font-size: 16px; font-weight: 700; }
@@ -190,14 +194,16 @@
     
     .list-item { 
       padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 14px; 
-      display: flex; justify-content: space-between; align-items: center; 
+    }
+    .note-input {
+      width: 100%; border: none; background: var(--input-bg); 
+      padding: 5px; border-radius: 5px; margin-top: 5px; font-size: 12px;
     }
 
     /* Autocomplete */
     #autocomplete-results {
       top: 70px; left: 20px; right: 20px; max-width: 600px; margin: 0 auto;
-      background: var(--card-bg); backdrop-filter: var(--card-blur);
-      border-radius: var(--radius); box-shadow: var(--shadow);
+      border-radius: var(--radius); 
       max-height: 250px; overflow-y: auto; display: none; pointer-events: auto;
     }
     .ac-item { padding: 14px; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 14px; cursor: pointer; }
@@ -211,7 +217,7 @@
   <div id="toast-container" class="toast-layer"></div>
 
   <div class="top-container ui-layer">
-    <div class="top-bar">
+    <div class="top-bar glass">
       <button class="btn-find" onclick="initLocate()">Find Me</button>
       
       <div class="search-wrapper">
@@ -228,35 +234,46 @@
     </div>
   </div>
 
-  <div id="autocomplete-results" class="autocomplete-layer"></div>
+  <div id="autocomplete-results" class="autocomplete-layer glass"></div>
 
-  <div id="menu-modal" class="modal modal-layer">
-    <div class="modal-header">
+  <div id="menu-modal" class="modal modal-layer glass">
+    <div class="modal-header" onmousedown="startDrag(event, 'menu-modal')">
       <h3 class="modal-title">Menu</h3>
       <button class="close-btn" onclick="toggleModal('menu-modal')">×</button>
     </div>
     <div class="modal-body">
-      <button class="btn btn-copy" onclick="toggleModal('saved-modal')" style="margin-bottom:10px">Saved Points</button>
-      <button class="btn btn-copy" onclick="toggleModal('history-modal')">History</button>
+      <button class="btn btn-copy" onclick="toggleModal('map-select-modal')" style="margin-bottom:10px; width:100%">Change Map Style</button>
+      <button class="btn btn-copy" onclick="toggleModal('saved-modal')" style="margin-bottom:10px; width:100%">Saved Points</button>
+      <button class="btn btn-copy" onclick="toggleModal('history-modal')" style="width:100%">History</button>
     </div>
   </div>
 
-  <div id="saved-modal" class="modal modal-layer">
-    <div class="modal-header"><h3 class="modal-title">Saved</h3><button class="close-btn" onclick="toggleModal('saved-modal')">×</button></div>
+  <div id="map-select-modal" class="modal modal-layer glass">
+    <div class="modal-header" onmousedown="startDrag(event, 'map-select-modal')">
+      <h3 class="modal-title">Map Engines</h3>
+      <button class="close-btn" onclick="toggleModal('map-select-modal')">×</button>
+    </div>
+    <div class="modal-body" id="map-list"></div>
+  </div>
+
+  <div id="saved-modal" class="modal modal-layer glass">
+    <div class="modal-header" onmousedown="startDrag(event, 'saved-modal')">
+      <h3 class="modal-title">Saved</h3><button class="close-btn" onclick="toggleModal('saved-modal')">×</button>
+    </div>
     <div class="modal-body">
       <div id="saved-list"></div>
       <button class="btn btn-save" onclick="exportList()" style="margin-top:10px; width:100%">Copy List</button>
     </div>
   </div>
 
-  <div id="history-modal" class="modal modal-layer">
-    <div class="modal-header"><h3 class="modal-title">History</h3><button class="close-btn" onclick="toggleModal('history-modal')">×</button></div>
+  <div id="history-modal" class="modal modal-layer glass">
+    <div class="modal-header" onmousedown="startDrag(event, 'history-modal')"><h3 class="modal-title">History</h3><button class="close-btn" onclick="toggleModal('history-modal')">×</button></div>
     <div class="modal-body" id="history-list"></div>
   </div>
 
   <div id="map"></div>
 
-  <div class="bottom-sheet ui-layer" id="bottom-sheet">
+  <div class="bottom-sheet ui-layer glass" id="bottom-sheet">
     <div class="handle-area" onclick="toggleDock()"><div class="handle-bar"></div></div>
 
     <div class="info-display">
@@ -275,8 +292,9 @@
     </div>
 
     <div class="control-row">
-      <span class="control-label">Bureaucracy Grid Overlay</span>
+      <span class="control-label">Consumer</span>
       <input type="range" class="mini-slider" min="0" max="1" step="0.1" value="0" id="gridSlider">
+      <span class="control-label" style="color:var(--danger)">Bureaucracy</span>
     </div>
   </div>
 
@@ -288,7 +306,9 @@
     cityCoords: "",
     marker: null,
     accuracyCircle: null,
+    tetherLine: null,
     mode: 'clean',
+    activeEngine: { clean: 'voyager', sat: 'esri' },
     gridOpacity: 0,
     history: JSON.parse(localStorage.getItem('ri_history')) || [],
     saved: JSON.parse(localStorage.getItem('ri_saved')) || []
@@ -304,21 +324,24 @@
   }
 
   // --- 3. MAP CONFIG ---
-  // Base Maps
-  const cleanMap = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
-  const satMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
-  
-  // Init
-  const map = L.map('map', { zoomControl: false, tap: true }).setView([39.7684, -86.1581], 15);
-  cleanMap.addTo(map);
+  const engines = {
+    clean: {
+      voyager: { name: "Carto Voyager (Recommended)", url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png' },
+      osm: { name: "OpenStreetMap", url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' },
+      esri: { name: "Esri World Navigation", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}' }
+    },
+    sat: {
+      esri: { name: "Esri Satellite", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' }
+    }
+  };
+
+  // Init Map
+  const map = L.map('map', { zoomControl: false, tap: true }).setView([39.7684, -86.1581], 12);
+  let baseLayer = L.tileLayer(engines.clean.voyager.url, { maxZoom: 19 }).addTo(map);
 
   // Overlays
   const cityUrl = 'https://xmaps.indy.gov/arcgis/rest/services/SalesForce/MAC311/MapServer';
-  
-  // Layer 18: Addresses (Always On)
-  L.esri.dynamicMapLayer({ url: cityUrl, layers: [18], opacity: 0.9, f: 'json', minZoom: 17, useCors: false }).addTo(map);
-  
-  // Layer 16: Grid (Slider Controlled)
+  const layerAddresses = L.esri.dynamicMapLayer({ url: cityUrl, layers: [18], opacity: 0.9, f: 'json', minZoom: 17, useCors: false }).addTo(map);
   const layerGrid = L.esri.dynamicMapLayer({ url: cityUrl, layers: [16], opacity: 0, f: 'json', useCors: false }).addTo(map);
 
   // --- 4. PROJ4 (Coordinate Math) ---
@@ -329,22 +352,21 @@
   // --- 5. LOGIC & INTERACTION ---
   
   map.on('click', (e) => {
-    handleMarker(e.latlng);
+    // Visuals
+    if(state.marker) map.removeLayer(state.marker);
+    state.marker = L.marker(e.latlng).addTo(map);
+    if(state.tetherLine) map.removeLayer(state.tetherLine); // Clear old tether
+    
     document.getElementById('bottom-sheet').classList.remove('minimized');
     processLocation(e.latlng);
   });
-
-  function handleMarker(latlng) {
-    if(state.marker) map.removeLayer(state.marker);
-    state.marker = L.marker(latlng).addTo(map);
-  }
 
   function processLocation(latlng) {
     updateDisplay("Processing...", "var(--text-sub)");
     state.lat = latlng.lat;
     state.lng = latlng.lng;
 
-    // 1. City Math
+    // 1. City Math (X/Y)
     if(window.proj4) {
       try {
         const indy = proj4("EPSG:4326", "EPSG:2965", [latlng.lng, latlng.lat]);
@@ -352,37 +374,48 @@
       } catch(e) { console.error(e); }
     }
 
-    // 2. Fetch Address
+    // 2. Fetch Address (Nearest Logic)
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latlng.lat}&lon=${latlng.lng}`;
     
     fetch(url, { headers: { 'User-Agent': 'Request-Indy-App' } })
-      .then(r => {
-        if(!r.ok) throw new Error("API Blocked");
-        return r.json();
-      })
+      .then(r => { if(!r.ok) throw new Error("API Blocked"); return r.json(); })
       .then(d => {
         if(d.error) throw new Error("No Address");
-        const a = d.address;
-        const name = d.name ? d.name + ", " : "";
-        const num = a.house_number || "";
-        const road = a.road || "Unnamed Location";
-        state.address = name + (num ? `${num} ${road}` : road);
         
+        let a = d.address;
+        let isApprox = false;
+        
+        // Scenario B: Pothole in empty lot logic
+        if (!a.house_number) {
+            isApprox = true;
+            // In a real backend we'd search radius, here we use the name or road
+            state.address = `Near ${d.name || a.road || "Location"} (Approx)`;
+        } else {
+            state.address = `${a.house_number} ${a.road}`;
+        }
+
+        // Draw Tether if Approx
+        if(isApprox && d.lat && d.lon) {
+            state.tetherLine = L.polyline([latlng, [d.lat, d.lon]], {color: 'var(--danger)', dashArray: '5, 10'}).addTo(map);
+        }
+
         updateUI();
         addToHistory();
       })
       .catch((e) => {
-        state.address = "Address Lookup Failed";
+        state.address = "Address Lookup Failed - Tap Retry";
         updateUI();
       });
   }
 
   function updateUI() {
-    // Logic: If slider is < 10% show address, else show coords
+    // Smart Copy Logic: Slider decides what we show
     const showGrid = state.gridOpacity > 0.1;
     if(showGrid) {
-      updateDisplay(state.cityCoords || "Calculating...", "var(--danger)", "OFFICIAL CITY COORDINATES");
+      // Bureaucracy Mode
+      updateDisplay(`Coords: ${state.cityCoords}`, "var(--danger)", "BUREAUCRATIC DATA");
     } else {
+      // Clean Mode
       updateDisplay(state.address, "var(--text-main)", "STANDARD ADDRESS");
     }
   }
@@ -402,12 +435,21 @@
     state.mode = mode;
     document.getElementById('tog-map').classList.toggle('active', mode === 'clean');
     document.getElementById('tog-sat').classList.toggle('active', mode === 'sat');
-    
-    if(mode === 'clean') {
-      map.addLayer(cleanMap); map.removeLayer(satMap);
-    } else {
-      map.addLayer(satMap); map.removeLayer(cleanMap);
-    }
+    refreshMapEngine();
+  }
+
+  function refreshMapEngine() {
+    if(baseLayer) map.removeLayer(baseLayer);
+    const engineKey = state.activeEngine[state.mode];
+    const url = engines[state.mode][engineKey].url;
+    baseLayer = L.tileLayer(url, { maxZoom: 19 }).addTo(map);
+    baseLayer.bringToBack();
+  }
+
+  window.switchEngine = function(key) {
+    state.activeEngine[state.mode] = key;
+    refreshMapEngine();
+    toggleModal('map-select-modal'); // Close
   }
 
   // Slider
@@ -420,43 +462,58 @@
   // Dock
   window.toggleDock = () => document.getElementById('bottom-sheet').classList.toggle('minimized');
 
-  // --- 7. ROBUST GPS ---
+  // --- 7. ROBUST GPS (Try/Catch + Fallback) ---
+  document.addEventListener("DOMContentLoaded", () => {
+      // Initial Low Accuracy Run (Fast Lock)
+      map.locate({setView: true, maxZoom: 15, enableHighAccuracy: false}); 
+  });
+
   window.initLocate = function() {
     const btn = document.querySelector('.btn-find');
     btn.innerText = "Locating...";
     
-    // Attempt High Accuracy
+    // Attempt High Accuracy with 5s Timeout
     map.locate({setView: true, maxZoom: 18, enableHighAccuracy: true, timeout: 5000});
     
     map.on('locationfound', (e) => {
       btn.innerText = "Find Me";
-      handleMarker(e.latlng);
       processLocation(e.latlng);
+      
       if(state.accuracyCircle) map.removeLayer(state.accuracyCircle);
+      if(state.marker) map.removeLayer(state.marker);
+      
       state.accuracyCircle = L.circle(e.latlng, { radius: e.accuracy, color: 'var(--primary)', fillOpacity: 0.1, weight: 1 }).addTo(map);
+      state.marker = L.marker(e.latlng).addTo(map);
     });
 
     map.on('locationerror', (e) => {
+      console.log("High Acc failed, trying low acc...");
       // Fallback
-      if(e.code === 3 || e.message.includes('timeout')) {
-         map.locate({setView: true, maxZoom: 18, enableHighAccuracy: false});
-      } else {
-         btn.innerText = "Find Me";
-         showToast("GPS Error");
-      }
+      map.locate({setView: true, maxZoom: 18, enableHighAccuracy: false});
+      btn.innerText = "Find Me";
+      if(e.code !== 3) showToast("Using Approx Location");
     });
   }
 
   // --- 8. SMART COPY & SAVED ---
   window.smartCopy = function() {
-    const txt = state.gridOpacity > 0.1 ? state.cityCoords : state.address;
+    const showGrid = state.gridOpacity > 0.1;
+    let txt = "";
+    
+    if(showGrid) {
+        // Bureaucracy Packet
+        txt = `${state.address} [${state.cityCoords}]`;
+    } else {
+        txt = state.address;
+    }
+    
     if(!txt || txt.includes("Processing")) return showToast("Wait for data...");
     navigator.clipboard.writeText(txt).then(() => showToast("Copied!"));
   }
 
   window.savePoint = function() {
     if(!state.address) return showToast("No location selected");
-    state.saved.push({ addr: state.address, coords: state.cityCoords });
+    state.saved.push({ addr: state.address, coords: state.cityCoords, notes: "" });
     localStorage.setItem('ri_saved', JSON.stringify(state.saved));
     showToast("Saved!");
   }
@@ -474,19 +531,47 @@
     const m = document.getElementById(id);
     if(m) {
         m.style.display = 'flex';
+        // Reset desktop pos
+        if(window.innerWidth > 768) { m.style.top = '100px'; m.style.left = '20px'; }
+        
         if(id === 'saved-modal') renderSaved();
         if(id === 'history-modal') renderHistory();
+        if(id === 'map-select-modal') renderMapList();
     }
+  }
+
+  function renderMapList() {
+    const list = document.getElementById('map-list');
+    list.innerHTML = "";
+    Object.keys(engines.clean).forEach(key => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-copy';
+        btn.style.width = '100%';
+        btn.style.marginBottom = '5px';
+        btn.style.textAlign = 'left';
+        btn.style.padding = '10px';
+        btn.innerText = engines.clean[key].name;
+        btn.onclick = () => switchEngine(key);
+        list.appendChild(btn);
+    });
   }
 
   function renderSaved() {
     const el = document.getElementById('saved-list');
     el.innerHTML = state.saved.map((item, i) => `
       <div class="list-item">
-        <div><strong>${item.addr}</strong><br><small>${item.coords}</small></div>
-        <button onclick="removeSaved(${i})" style="color:var(--danger); border:none; background:none; font-size:18px;">✕</button>
+        <div style="flex:1">
+            <strong>${item.addr}</strong><br>
+            <input type="text" class="note-input" placeholder="Add note..." value="${item.notes || ''}" onchange="updateNote(${i}, this.value)">
+        </div>
+        <button onclick="removeSaved(${i})" style="color:var(--danger); border:none; background:none; font-size:20px; padding:0 10px;">✕</button>
       </div>
     `).join('');
+  }
+  
+  window.updateNote = (i, val) => {
+      state.saved[i].notes = val;
+      localStorage.setItem('ri_saved', JSON.stringify(state.saved));
   }
 
   function renderHistory() {
@@ -502,11 +587,33 @@
   }
 
   window.exportList = () => {
-    let txt = state.saved.map((p, i) => `${i+1}. ${p.addr} (${p.coords})`).join('\n');
+    let txt = state.saved.map((p, i) => `${i+1}. ${p.addr} (${p.coords}) - ${p.notes}`).join('\n');
     navigator.clipboard.writeText(txt).then(() => showToast("List Copied"));
   }
 
-  // --- 10. EXTERNAL & SEARCH ---
+  // --- 10. DRAGGABLE LOGIC ---
+  let dragItem = null; let offsetX = 0; let offsetY = 0;
+  window.startDrag = function(e, id) {
+    if(window.innerWidth <= 768) return; 
+    dragItem = document.getElementById(id);
+    offsetX = e.clientX - dragItem.getBoundingClientRect().left;
+    offsetY = e.clientY - dragItem.getBoundingClientRect().top;
+    document.addEventListener('mousemove', dragMove);
+    document.addEventListener('mouseup', dragEnd);
+  }
+  function dragMove(e) {
+    if(!dragItem) return;
+    e.preventDefault();
+    dragItem.style.left = (e.clientX - offsetX) + 'px';
+    dragItem.style.top = (e.clientY - offsetY) + 'px';
+  }
+  function dragEnd() {
+    dragItem = null;
+    document.removeEventListener('mousemove', dragMove);
+    document.removeEventListener('mouseup', dragEnd);
+  }
+
+  // --- 11. EXTERNAL & SEARCH ---
   window.openMapApp = (type) => {
     if(!state.lat) return showToast("Select location");
     const url = type === 'google' 
@@ -553,16 +660,14 @@
           div.onclick = () => {
             map.setView([item.lat, item.lon], 18);
             processLocation({lat: item.lat, lng: item.lon});
-            handleMarker({lat: item.lat, lng: item.lon});
+            if(state.marker) map.removeLayer(state.marker);
+            state.marker = L.marker([item.lat, item.lon]).addTo(map);
             list.style.display = 'none';
           };
           list.appendChild(div);
         });
       });
   }
-
-  // Start
-  initLocate();
 </script>
 </body>
 </html>
