@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Request-Indy V12</title>
+  <title>Request-Indy V13</title>
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -59,7 +59,7 @@
     .top-container {
       top: 0; left: 0; right: 0; display: flex; justify-content: center;
       padding-top: max(16px, env(safe-area-inset-top));
-      transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      transition: transform 0.1s ease-out; /* Physics driven */
     }
     .top-bar {
       height: auto; border-radius: 25px; padding: 10px; width: 94%; max-width: 600px;
@@ -79,7 +79,7 @@
       flex: 1; height: 100%; border: none; background: transparent; font-size: 16px; outline: none;
     }
     
-    /* Map Toggle Pill */
+    /* Toggle Pill */
     .toggle-pill {
       background: var(--input); border-radius: 18px; padding: 2px; display: flex; height: 36px;
     }
@@ -89,24 +89,23 @@
     }
     .toggle-opt.active { background: white; color: var(--text); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 
-    /* Top Drag Handle */
-    .drag-handle-top {
-      width: 100%; height: 15px; display: flex; align-items: center; justify-content: center; cursor: grab;
+    /* Handle */
+    .drag-handle {
+      width: 100%; height: 20px; display: flex; align-items: center; justify-content: center; cursor: grab;
     }
     .handle-pill { width: 40px; height: 5px; background: var(--handle); border-radius: 3px; }
 
-    /* Compact Mode logic */
-    .top-container.compact { transform: translateY(-70px); } /* Hides main row, shows handle */
-    .top-container.compact .top-bar { padding-bottom: 30px; } /* Ensure handle visible */
+    /* Compact States */
+    .top-container.compact { transform: translateY(-75px); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+    .bottom-sheet.minimized { transform: translateY(calc(100% - 30px)); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
 
     /* --- BOTTOM SHEET --- */
     .bottom-sheet {
-      bottom: 0; left: 0; right: 0; border-radius: 25px 25px 0 0;
+      pointer-events: auto; bottom: 0; left: 0; right: 0;
+      border-radius: 25px 25px 0 0;
       padding: 0 20px max(30px, env(safe-area-inset-bottom)) 20px;
-      transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-      transform: translateY(0);
+      transition: transform 0.1s ease-out; /* Physics driven */
     }
-    .bottom-sheet.minimized { transform: translateY(calc(100% - 30px)); }
     
     @media (min-width: 768px) {
       .bottom-sheet { left: auto; right: 20px; bottom: 20px; width: 380px; border-radius: 25px; }
@@ -140,9 +139,13 @@
       display: grid; grid-template-columns: 1fr auto; align-items: center; 
       padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.05); gap: 10px;
     }
+    .note-input {
+      width: 100%; border: none; background: var(--input); padding: 6px; 
+      border-radius: 6px; font-size: 12px; margin-top: 4px; color: var(--text);
+    }
 
     /* --- TOAST --- */
-    #toast-container { top: 80px; left: 50%; transform: translateX(-50%); width: auto; text-align: center; }
+    #toast-container { top: 120px; left: 50%; transform: translateX(-50%); width: auto; text-align: center; }
     .toast {
       background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); color: black;
       padding: 10px 20px; border-radius: 20px; margin-bottom: 10px; font-size: 14px; font-weight: 600;
@@ -152,7 +155,7 @@
 
     /* --- AUTOCOMPLETE --- */
     #autocomplete-results {
-      top: 80px; left: 20px; right: 20px; max-width: 600px; margin: 0 auto;
+      top: 90px; left: 20px; right: 20px; max-width: 600px; margin: 0 auto;
       border-radius: 20px; max-height: 250px; overflow-y: auto; display: none; pointer-events: auto;
     }
     .ac-item { padding: 14px; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 14px; cursor: pointer; }
@@ -178,7 +181,7 @@
         </div>
         <button class="toggle-opt" onclick="toggleModal('menu-modal')" style="font-size:18px">☰</button>
       </div>
-      <div class="drag-handle-top" id="top-handle"><div class="handle-pill"></div></div>
+      <div class="drag-handle" id="top-handle"><div class="handle-pill"></div></div>
     </div>
   </div>
 
@@ -188,7 +191,7 @@
     <div class="modal-header"><h3>Menu</h3><button class="btn-outline" onclick="toggleModal('menu-modal')">✕</button></div>
     <div class="modal-body">
       <button class="btn btn-gray" onclick="toggleModal('saved-modal')" style="width:100%; margin-bottom:10px">Saved Points</button>
-      <button class="btn btn-gray" onclick="toggleModal('history-modal')" style="width:100%; margin-bottom:10px">History</button>
+      <button class="btn btn-gray" onclick="toggleModal('history-modal')" style="width:100%">History</button>
     </div>
   </div>
 
@@ -208,7 +211,7 @@
   <div id="map"></div>
 
   <div class="bottom-sheet ui-layer glass" id="bottom-sheet">
-    <div class="handle-area" id="bottom-handle"><div class="handle-pill"></div></div>
+    <div class="drag-handle" id="bottom-handle"><div class="handle-pill"></div></div>
 
     <div class="info-display">
       <span class="label-micro" id="data-label">Standard Address</span>
@@ -227,9 +230,9 @@
     <button class="btn btn-outline" onclick="openExt('apple')" style="width:100%; margin-bottom:10px">Apple Maps</button>
 
     <div class="slider-row">
-      <span class="label-micro" style="color:black">Clean</span>
+      <span class="label-micro" style="color:black">Consumer</span>
       <input type="range" min="0" max="1" step="0.1" value="0" id="gridSlider">
-      <span class="label-micro" style="color:var(--red)">Grid</span>
+      <span class="label-micro" style="color:var(--red)">Bureaucracy</span>
     </div>
   </div>
 
@@ -248,7 +251,7 @@
     sat: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' }
   };
 
-  // --- 2. MAP SETUP ---
+  // --- 2. MAP CONFIG ---
   const map = L.map('map', { zoomControl: false, tap: true }).setView([39.7684, -86.1581], 12);
   let baseLayer = L.tileLayer(engines.clean.url, { maxZoom: 19 }).addTo(map);
   
@@ -257,21 +260,20 @@
   L.esri.dynamicMapLayer({ url: cityUrl, layers: [18], opacity: 0.9, f: 'json', useCors: false }).addTo(map);
   const layerGrid = L.esri.dynamicMapLayer({ url: cityUrl, layers: [16], opacity: 0, f: 'json', useCors: false }).addTo(map);
   
-  // Marker Group for Saved Points (Persistence Fix)
+  // Persistent Saved Markers Layer
   state.savedLayerGroup = L.layerGroup().addTo(map);
 
-  // Proj4
+  // Proj4 Setup
   if(window.proj4) proj4.defs("EPSG:2965", "+proj=tmerc +lat_0=37.5 +lon_0=-85.66666666666667 +k=0.9999666666666667 +x_0=2960000 +y_0=250000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=us-ft +no_defs");
 
   // --- 3. LIFECYCLE ---
   document.addEventListener("DOMContentLoaded", () => {
     initLocate();
-    renderMapMarkers();
+    renderSavedMarkers();
   });
 
-  // --- 4. GPS LOGIC ---
+  // --- 4. GPS LOGIC (FAST LOCK) ---
   function initLocate() {
-    // Immediate rough lock
     map.locate({ setView: true, maxZoom: 15, enableHighAccuracy: false });
     // Silent upgrade
     setTimeout(() => {
@@ -290,6 +292,8 @@
     state.userMarker = L.circleMarker(e.latlng, {
       radius: 8, fillColor: '#007AFF', color: 'white', weight: 2, fillOpacity: 1
     }).addTo(map);
+    // Pulse
+    L.circle(e.latlng, { radius: e.accuracy/2, color: '#007AFF', fillOpacity: 0.1, weight: 0 }).addTo(map);
   });
 
   map.on('locationerror', () => {
@@ -297,13 +301,13 @@
     showToast("GPS Error - Tap Retry");
   });
 
-  // --- 5. INTERACTION & GEOCODER ---
+  // --- 5. INTERACTION & GEOCODING ---
   map.on('click', (e) => {
     if (state.selectMarker) map.removeLayer(state.selectMarker);
     state.selectMarker = L.marker(e.latlng).addTo(map);
     if (state.tether) { map.removeLayer(state.tether); state.tether = null; }
     
-    // Auto-open sheet
+    // Auto-open sheet if minimized
     document.getElementById('bottom-sheet').classList.remove('minimized');
     processLocation(e.latlng);
   });
@@ -312,7 +316,7 @@
     updateUI("Processing...", "var(--sub)");
     state.lat = latlng.lat; state.lng = latlng.lng;
 
-    // City Coords
+    // 1. City Coords
     if (window.proj4) {
       try {
         const indy = proj4("EPSG:4326", "EPSG:2965", [latlng.lng, latlng.lat]);
@@ -320,9 +324,9 @@
       } catch(e) {}
     }
 
-    // Address
+    // 2. Nearest Address
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latlng.lat}&lon=${latlng.lng}&addressdetails=1`;
-    fetch(url, { headers: { 'User-Agent': 'Request-Indy-V12' } })
+    fetch(url, { headers: { 'User-Agent': 'Request-Indy-V13' } })
       .then(r => r.json())
       .then(d => {
         if(d.error) throw new Error();
@@ -332,6 +336,7 @@
         
         if(!num) {
           state.address = `Near ${d.name || street} (Approx)`;
+          // Tether Visual
           if(d.lat) state.tether = L.polyline([latlng, [d.lat, d.lon]], {color: 'var(--red)', dashArray: '5,10'}).addTo(map);
         } else {
           state.address = `${num} ${street}`;
@@ -348,10 +353,7 @@
   function updateUI(text, color) {
     const lbl = document.getElementById('data-label');
     const val = document.getElementById('data-value');
-    
-    if(text) {
-      val.innerText = text; val.style.color = color; return;
-    }
+    if(text) { val.innerText = text; val.style.color = color; return; }
 
     if(state.gridOpacity > 0.1) {
       lbl.innerText = "OFFICIAL CITY COORDINATES";
@@ -364,80 +366,106 @@
     }
   }
 
-  // --- 6. SAVED POINTS & MARKERS ---
-  function renderMapMarkers() {
+  // --- 6. SAVED POINTS LOGIC ---
+  function renderSavedMarkers() {
     state.savedLayerGroup.clearLayers();
     state.saved.forEach(p => {
       L.circleMarker([p.lat, p.lng], { radius: 6, color: 'white', fillColor: 'var(--green)', fillOpacity: 1, weight: 2 })
-       .bindPopup(`<b>${p.addr}</b><br>${p.coords}`)
+       .bindPopup(`<b>${p.addr}</b><br>${p.notes ? 'Note: '+p.notes : ''}`)
        .addTo(state.savedLayerGroup);
     });
   }
 
   window.savePoint = () => {
     if (!state.address) return showToast("No location selected");
-    state.saved.push({ addr: state.address, coords: state.cityCoords, lat: state.lat, lng: state.lng });
+    state.saved.push({ id: Date.now(), addr: state.address, coords: state.cityCoords, lat: state.lat, lng: state.lng, notes: "" });
     localStorage.setItem('ri_saved', JSON.stringify(state.saved));
-    renderMapMarkers();
+    renderSavedMarkers();
     if(document.getElementById('saved-modal').style.display === 'flex') renderSavedList();
     showToast("Saved!");
   };
 
-  window.deletePoint = (i) => {
-    state.saved.splice(i, 1);
+  window.updateNote = (index, val) => {
+    state.saved[index].notes = val;
     localStorage.setItem('ri_saved', JSON.stringify(state.saved));
-    renderMapMarkers();
+    renderSavedMarkers(); // Re-render to update popups
+  };
+
+  window.deletePoint = (index) => {
+    state.saved.splice(index, 1);
+    localStorage.setItem('ri_saved', JSON.stringify(state.saved));
+    renderSavedMarkers();
     renderSavedList();
   };
 
-  // --- 7. UI LOGIC (DRAG & MODALS) ---
-  
-  // Sheet Drag
-  setupDrag('bottom-handle', 'bottom-sheet', 'bottom');
-  setupDrag('top-handle', 'top-sheet', 'top');
+  // --- 7. PHYSICS ENGINE (Unified) ---
+  setupPhysics('top-handle', 'top-sheet', 'up');
+  setupPhysics('bottom-handle', 'bottom-sheet', 'down');
 
-  function setupDrag(handleId, sheetId, type) {
+  function setupPhysics(handleId, elementId, direction) {
     const handle = document.getElementById(handleId);
-    const sheet = document.getElementById(sheetId);
-    let startY = 0; let clickTime = 0;
+    const el = document.getElementById(elementId);
+    let startY = 0, startTime = 0;
 
-    handle.addEventListener('touchstart', e => {
-      startY = e.touches[0].clientY; clickTime = Date.now();
-    }, {passive: true});
+    const start = (y) => {
+      startY = y; startTime = Date.now();
+      el.style.transition = 'none'; // Follow finger instantly
+    };
 
-    handle.addEventListener('touchmove', e => {
-      const delta = e.touches[0].clientY - startY;
-      // Simple transform logic
-      if (type === 'bottom' && delta > 0) sheet.style.transform = `translateY(${delta}px)`;
-      if (type === 'top' && delta < 0) sheet.style.transform = `translateY(${delta}px)`;
-    }, {passive: true});
-
-    handle.addEventListener('touchend', e => {
-      const delta = e.changedTouches[0].clientY - startY;
-      sheet.style.transform = '';
+    const move = (y) => {
+      const delta = y - startY;
+      // Constraint: Only allow drag in minimize direction
+      if (direction === 'down' && delta < 0) return; // Bottom sheet moving up is rigid
+      if (direction === 'up' && delta > 0) return; // Top sheet moving down is rigid
       
-      // Click vs Drag
-      if (Date.now() - clickTime < 200 && Math.abs(delta) < 10) {
-        if (type === 'top') sheet.classList.toggle('compact'); 
-        else sheet.classList.toggle('minimized');
+      // Visual feedback
+      el.style.transform = `translateY(${delta}px)`;
+    };
+
+    const end = (y) => {
+      const delta = y - startY;
+      const time = Date.now() - startTime;
+      el.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
+      el.style.transform = '';
+
+      // Click (Tap) Detection
+      if (Math.abs(delta) < 10 && time < 250) {
+        if (direction === 'up') el.classList.toggle('compact');
+        else el.classList.toggle('minimized');
         return;
       }
-      // Snap Logic
-      if (type === 'bottom' && delta > 50) sheet.classList.add('minimized');
-      else if (type === 'bottom' && delta < -50) sheet.classList.remove('minimized');
-      
-      if (type === 'top' && delta < -50) sheet.classList.add('compact');
-      else if (type === 'top' && delta > 50) sheet.classList.remove('compact');
-    });
+
+      // Drag Snap Logic
+      const threshold = 50;
+      if (direction === 'down') {
+        if (delta > threshold) el.classList.add('minimized');
+        else el.classList.remove('minimized');
+      } else {
+        if (delta < -threshold) el.classList.add('compact');
+        else el.classList.remove('compact');
+      }
+    };
+
+    // Touch
+    handle.addEventListener('touchstart', e => start(e.touches[0].clientY), {passive:true});
+    handle.addEventListener('touchmove', e => move(e.touches[0].clientY), {passive:true});
+    handle.addEventListener('touchend', e => end(e.changedTouches[0].clientY));
     
-    // Mouse Support (Simplified)
-    handle.addEventListener('mousedown', () => {
-        if (type === 'top') sheet.classList.toggle('compact'); 
-        else sheet.classList.toggle('minimized');
+    // Mouse
+    handle.addEventListener('mousedown', e => {
+      start(e.clientY);
+      const moveHandler = (ev) => move(ev.clientY);
+      const endHandler = (ev) => {
+        end(ev.clientY);
+        document.removeEventListener('mousemove', moveHandler);
+        document.removeEventListener('mouseup', endHandler);
+      };
+      document.addEventListener('mousemove', moveHandler);
+      document.addEventListener('mouseup', endHandler);
     });
   }
 
-  // Modals
+  // --- 8. UI HELPERS ---
   window.toggleModal = (id) => {
     document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
     const m = document.getElementById(id);
@@ -451,8 +479,11 @@
   function renderSavedList() {
     document.getElementById('saved-list').innerHTML = state.saved.map((p, i) => `
       <div class="list-item">
-        <div><strong>${p.addr}</strong><br><small>${p.coords}</small></div>
-        <button onclick="deletePoint(${i})" style="color:var(--red); border:none; background:none; font-weight:bold">Delete</button>
+        <div style="flex:1">
+          <strong>${p.addr}</strong><br>
+          <input type="text" class="note-input" value="${p.notes}" placeholder="Add note..." onchange="updateNote(${i}, this.value)">
+        </div>
+        <button onclick="deletePoint(${i})" style="color:var(--red); border:none; background:none; font-size:20px;">✕</button>
       </div>
     `).join('');
   }
@@ -463,7 +494,6 @@
     `).join('');
   }
 
-  // --- 8. HELPERS ---
   window.setMode = (m) => {
     state.mode = m;
     document.getElementById('tog-map').classList.toggle('active', m === 'clean');
@@ -486,7 +516,7 @@
 
   window.openExt = (type) => {
     if(!state.lat) return showToast("Select location");
-    let url;
+    let url = "";
     if(type === 'google') url = `https://www.google.com/maps/search/?api=1&query=${state.lat},${state.lng}`;
     if(type === 'street') url = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint={state.lat},${state.lng}`;
     if(type === 'apple') url = `http://maps.apple.com/?q=${state.lat},${state.lng}`;
@@ -512,23 +542,22 @@
     clearTimeout(typeTimer);
     const q = document.getElementById('search-input').value;
     if(q.length < 3) return;
-    
     typeTimer = setTimeout(() => {
-      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + ", Indianapolis")}`, { headers: { 'User-Agent': 'Request-Indy-V12' } })
-        .then(r => r.json())
-        .then(data => {
-          const list = document.getElementById('autocomplete-results');
-          list.innerHTML = ""; list.style.display = 'block';
-          data.forEach(i => {
-            const d = document.createElement('div'); d.className = 'ac-item';
-            d.innerText = i.display_name.split(',')[0];
-            d.onclick = () => {
-              map.setView([i.lat, i.lon], 18);
-              processLocation({lat: i.lat, lng: i.lon});
-              list.style.display = 'none';
-            };
-            list.appendChild(d);
-          });
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q+", Indianapolis")}`, {headers:{'User-Agent':'Request-Indy-V13'}})
+        .then(r=>r.json()).then(data=>{
+            const list = document.getElementById('autocomplete-results');
+            list.innerHTML = ""; list.style.display = 'block';
+            data.forEach(i => {
+                const d = document.createElement('div'); d.className = 'ac-item';
+                d.innerText = i.display_name.split(',')[0];
+                d.onclick = () => {
+                    map.setView([i.lat, i.lon], 18);
+                    document.getElementById('bottom-sheet').classList.remove('minimized');
+                    processLocation({lat: i.lat, lng: i.lon});
+                    list.style.display = 'none';
+                };
+                list.appendChild(d);
+            });
         });
     }, 500);
   };
