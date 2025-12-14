@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Request-Indy V15</title>
+  <title>Request-Indy V16.5</title>
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -11,51 +11,54 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
 
   <style>
-    /* --- CSS VARIABLES (Apple Aesthetic) --- */
+    /* --- 2. CSS VARIABLES (Strict Apple Aesthetic) --- */
     :root {
       --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-      --bg: #F2F2F7;
-      --glass: rgba(255, 255, 255, 0.90);
-      --blur: blur(25px);
-      --text: #000000;
-      --sub: #8E8E93;
-      --blue: #007AFF; 
-      --red: #FF3B30;  
-      --green: #34C759; 
+      --bg-color: #F2F2F7;
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-blur: blur(20px);
+      --text-main: #000000;
+      --text-sub: #8E8E93;
+      --primary: #007AFF; 
+      --danger: #FF3B30;  
+      --success: #34C759; 
       --radius: 22px;
       --shadow: 0 8px 32px rgba(0,0,0,0.12);
       --border: 0.5px solid rgba(0,0,0,0.1);
-      --input: rgba(118, 118, 128, 0.12);
+      --input-bg: rgba(118, 118, 128, 0.12);
       --handle: #C7C7CC;
     }
 
+    /* --- 3. GLOBAL RESET & MOBILE FIX --- */
     body, html { 
-      height: 100%; width: 100%; margin: 0; padding: 0; 
-      overflow: hidden; font-family: var(--font); background: var(--bg);
+      height: 100dvh; /* CRITICAL: Dynamic Viewport Height for Mobile */
+      width: 100%; margin: 0; padding: 0; 
+      overflow: hidden; font-family: var(--font); background: var(--bg-color);
       -webkit-tap-highlight-color: transparent;
+      -webkit-font-smoothing: antialiased;
     }
 
     /* Z-INDEX STRATEGY */
     #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 0; }
-    .ui-layer { z-index: 1000; position: absolute; pointer-events: none; }
-    .modal-layer { z-index: 2000; position: absolute; } 
-    .autocomplete-layer { z-index: 3000; position: absolute; }
+    .ui-layer { z-index: 2000; position: absolute; pointer-events: none; }
+    .modal-layer { z-index: 3000; position: absolute; } 
+    .autocomplete-layer { z-index: 3500; position: absolute; }
     .toast-layer { z-index: 4000; position: fixed; pointer-events: none; }
 
     /* UTILITIES */
     .glass {
-      background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+      background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
       border: var(--border); box-shadow: var(--shadow); pointer-events: auto;
     }
     .btn {
       height: 44px; border: none; border-radius: 12px; font-weight: 600; font-size: 15px; cursor: pointer;
       font-family: var(--font); display: flex; align-items: center; justify-content: center; pointer-events: auto;
     }
-    .btn-blue { background: var(--blue); color: white; }
-    .btn-gray { background: var(--input); color: var(--text); }
-    .btn-outline { background: transparent; border: 1px solid var(--sub); color: var(--text); font-size: 13px; }
+    .btn-blue { background: var(--primary); color: white; }
+    .btn-gray { background: var(--input-bg); color: var(--text-main); }
+    .btn-outline { background: transparent; border: 1px solid var(--text-sub); color: var(--text-main); font-size: 13px; }
 
-    /* --- TOP BAR (STATIC) --- */
+    /* --- TOP BAR --- */
     .top-container {
       top: 0; left: 0; right: 0; display: flex; justify-content: center;
       padding-top: max(16px, env(safe-area-inset-top));
@@ -65,35 +68,48 @@
       display: flex; align-items: center; gap: 8px;
     }
     .btn-find {
-      background: var(--blue); color: white; border: none; height: 36px; padding: 0 16px; 
+      background: var(--primary); color: white; border: none; height: 36px; padding: 0 16px; 
       border-radius: 18px; font-size: 13px; font-weight: 600; cursor: pointer;
     }
     .search-wrap {
-      flex: 1; height: 36px; background: var(--input); border-radius: 10px;
+      flex: 1; height: 36px; background: var(--input-bg); border-radius: 10px;
       display: flex; align-items: center; padding: 0 8px;
     }
     #search-input {
       flex: 1; height: 100%; border: none; background: transparent; font-size: 16px; outline: none;
     }
-    .toggle-pill {
-      background: var(--input); border-radius: 18px; padding: 2px; display: flex; height: 36px;
+
+    /* --- SLIDING PHYSICS TOGGLE --- */
+    .slide-toggle-container {
+      position: relative; width: 90px; height: 36px; background: var(--input-bg);
+      border-radius: 18px; display: flex; align-items: center; padding: 2px;
+      cursor: pointer; overflow: hidden;
     }
-    .toggle-opt {
-      padding: 0 12px; border: none; background: transparent; border-radius: 16px;
-      font-size: 12px; font-weight: 600; color: var(--sub); cursor: pointer;
+    .slide-bg {
+      position: absolute; top: 2px; left: 2px; width: 43px; height: 32px;
+      background: #FFFFFF; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); pointer-events: none;
     }
-    .toggle-opt.active { background: white; color: var(--text); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .slide-labels {
+      position: relative; z-index: 2; display: flex; width: 100%; height: 100%;
+    }
+    .slide-opt {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 600; color: var(--text-main);
+    }
+    /* Toggle State Class */
+    .slide-toggle-container.sat-mode .slide-bg { transform: translateX(43px); }
+
     .icon-btn {
-      background: transparent; border: none; font-size: 20px; cursor: pointer; padding: 0 8px; color: var(--blue); pointer-events: auto;
+      background: transparent; border: none; font-size: 20px; cursor: pointer; padding: 0 8px; color: var(--primary); pointer-events: auto;
     }
 
-    /* --- BOTTOM SHEET (PHYSICS DRAG) --- */
+    /* --- BOTTOM SHEET (PHYSICS) --- */
     .bottom-sheet {
       pointer-events: auto; bottom: 0; left: 0; right: 0;
       border-radius: 25px 25px 0 0;
       padding: 0 20px max(30px, env(safe-area-inset-bottom)) 20px;
-      transition: transform 0.1s ease-out; /* JS Physics */
-      transform: translateY(0);
+      transform: translateY(0); /* Controlled by JS Physics */
     }
     
     @media (min-width: 768px) {
@@ -106,16 +122,16 @@
     .handle-bar { width: 40px; height: 5px; background: var(--handle); border-radius: 3px; }
 
     .info-display { text-align: center; margin-bottom: 15px; }
-    .label-micro { font-size: 10px; font-weight: 700; color: var(--sub); text-transform: uppercase; margin-bottom: 4px; }
-    .val-macro { font-size: 17px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .label-micro { font-size: 10px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; margin-bottom: 4px; }
+    .val-macro { font-size: 17px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
     
     .slider-row {
       display: flex; justify-content: space-between; align-items: center;
-      background: var(--input); padding: 8px 16px; border-radius: 14px; margin-top: 10px;
+      background: var(--input-bg); padding: 8px 16px; border-radius: 14px; margin-top: 10px;
     }
-    input[type=range] { width: 30%; accent-color: var(--red); }
+    input[type=range] { width: 30%; accent-color: var(--danger); }
 
     /* --- MODALS (DRAGGABLE) --- */
     .modal {
@@ -126,6 +142,7 @@
       padding: 15px; background: rgba(0,0,0,0.03); border-bottom: var(--border);
       border-radius: 25px 25px 0 0; display: flex; justify-content: space-between; align-items: center; cursor: grab;
     }
+    .modal-title { margin: 0; font-size: 16px; font-weight: 700; }
     .modal-body { padding: 15px; overflow-y: auto; }
     
     .list-item { 
@@ -133,8 +150,8 @@
       padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.05); gap: 10px;
     }
     .note-input {
-      width: 100%; border: none; background: var(--input); padding: 6px; 
-      border-radius: 6px; font-size: 12px; margin-top: 4px; color: var(--text);
+      width: 100%; border: none; background: var(--input-bg); padding: 6px; 
+      border-radius: 6px; font-size: 12px; margin-top: 4px; color: var(--text-main);
     }
 
     /* --- TOAST --- */
@@ -167,10 +184,15 @@
       <div class="search-wrap">
         <input type="text" id="search-input" placeholder="Search..." oninput="handleTyping()">
       </div>
-      <div class="toggle-pill">
-        <button id="tog-map" class="toggle-opt active" onclick="setMode('clean')">Map</button>
-        <button id="tog-sat" class="toggle-opt" onclick="setMode('sat')">Sat</button>
+      
+      <div class="slide-toggle-container" id="mode-toggle" onclick="toggleMapMode()">
+        <div class="slide-bg"></div>
+        <div class="slide-labels">
+          <div class="slide-opt">Map</div>
+          <div class="slide-opt">Sat</div>
+        </div>
       </div>
+      
       <button class="icon-btn" onclick="toggleMenu()">☰</button>
     </div>
   </div>
@@ -178,30 +200,34 @@
   <div id="autocomplete-results" class="autocomplete-layer glass"></div>
 
   <div id="menu-modal" class="modal modal-layer glass">
-    <div class="modal-header" id="menu-handle"><h3>Menu</h3><button class="btn-outline" onclick="toggleModal('menu-modal')">✕</button></div>
+    <div class="modal-header" id="menu-handle"><h3 class="modal-title">Menu</h3></div>
     <div class="modal-body">
       <button class="btn btn-gray" onclick="toggleModal('map-select')" style="width:100%; margin-bottom:10px">Map Style</button>
       <button class="btn btn-gray" onclick="toggleModal('saved-modal')" style="width:100%; margin-bottom:10px">Saved Points</button>
-      <button class="btn btn-gray" onclick="toggleModal('history-modal')" style="width:100%">History</button>
+      <button class="btn btn-gray" onclick="toggleModal('history-modal')" style="width:100%; margin-bottom:10px">History</button>
+      <button class="btn btn-outline" onclick="toggleModal('none')" style="width:100%">Close Menu</button>
     </div>
   </div>
 
   <div id="map-select" class="modal modal-layer glass">
-    <div class="modal-header" id="map-handle"><h3>Map Style</h3><button class="btn-outline" onclick="toggleModal('map-select')">✕</button></div>
+    <div class="modal-header" id="map-handle"><h3 class="modal-title">Map Style</h3></div>
     <div class="modal-body" id="map-list"></div>
+    <div style="padding:10px"><button class="btn btn-outline" onclick="toggleModal('none')" style="width:100%">Close</button></div>
   </div>
 
   <div id="saved-modal" class="modal modal-layer glass">
-    <div class="modal-header" id="saved-handle"><h3>Saved</h3><button class="btn-outline" onclick="toggleModal('saved-modal')">✕</button></div>
+    <div class="modal-header" id="saved-handle"><h3 class="modal-title">Saved</h3></div>
     <div class="modal-body">
       <div id="saved-list"></div>
       <button class="btn btn-blue" onclick="exportList()" style="width:100%; margin-top:10px">Copy List</button>
+      <button class="btn btn-outline" onclick="toggleModal('none')" style="width:100%; margin-top:10px">Close</button>
     </div>
   </div>
 
   <div id="history-modal" class="modal modal-layer glass">
-    <div class="modal-header" id="history-handle"><h3>History</h3><button class="btn-outline" onclick="toggleModal('history-modal')">✕</button></div>
+    <div class="modal-header" id="history-handle"><h3 class="modal-title">History</h3></div>
     <div class="modal-body" id="history-list"></div>
+    <div style="padding:10px"><button class="btn btn-outline" onclick="toggleModal('none')" style="width:100%">Close</button></div>
   </div>
 
   <div id="map"></div>
@@ -216,7 +242,7 @@
 
     <div class="btn-grid">
       <button class="btn btn-blue" onclick="savePoint()">Save Point</button>
-      <button class="btn btn-gray" onclick="smartCopy()">Copy Current Location</button>
+      <button class="btn btn-gray" onclick="smartCopy()">Copy Location</button>
     </div>
 
     <div class="btn-grid">
@@ -228,7 +254,7 @@
     <div class="slider-row">
       <span class="label-micro" style="color:black">Clean</span>
       <input type="range" min="0" max="1" step="0.1" value="0" id="gridSlider">
-      <span class="label-micro" style="color:var(--red)">Grid</span>
+      <span class="label-micro" style="color:var(--danger)">Grid</span>
     </div>
   </div>
 
@@ -241,9 +267,6 @@
     history: JSON.parse(localStorage.getItem('ri_history')) || [],
     saved: JSON.parse(localStorage.getItem('ri_saved')) || []
   };
-
-  // Smart Navigation Logic
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   const engines = {
     clean: { 
@@ -274,7 +297,7 @@
     renderSavedMarkers();
   });
 
-  // --- 4. GPS LOGIC (ROBUST) ---
+  // --- 4. GPS LOGIC (IMMEDIATE + SILENT UPGRADE) ---
   function initLocate() {
     map.locate({ setView: true, maxZoom: 15, enableHighAccuracy: false });
     setTimeout(() => {
@@ -301,22 +324,21 @@
     showToast("GPS Error - Tap Retry");
   });
 
-  // --- 5. GEOCODING (STRICT PARSING) ---
+  // --- 5. GEOCODING (CONTEXT AWARE SEARCH) ---
   map.on('click', (e) => {
     if (state.selectMarker) map.removeLayer(state.selectMarker);
     state.selectMarker = L.marker(e.latlng).addTo(map);
     if (state.tether) { map.removeLayer(state.tether); state.tether = null; }
     
-    // Auto-open sheet
+    document.getElementById('bottom-sheet').style.transform = 'translateY(0)';
     document.getElementById('bottom-sheet').classList.remove('minimized');
     processLocation(e.latlng);
   });
 
   function processLocation(latlng) {
-    updateUI("Processing...", "var(--sub)");
+    updateUI("Processing...", "var(--text-sub)");
     state.lat = latlng.lat; state.lng = latlng.lng;
 
-    // 1. City Coords
     if (window.proj4) {
       try {
         const indy = proj4("EPSG:4326", "EPSG:2965", [latlng.lng, latlng.lat]);
@@ -324,24 +346,21 @@
       } catch(e) {}
     }
 
-    // 2. Fetch Address (Strict Zip Parsing)
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latlng.lat}&lon=${latlng.lng}&addressdetails=1`;
-    fetch(url, { headers: { 'User-Agent': 'Request-Indy-V15' } })
+    fetch(url, { headers: { 'User-Agent': 'Request-Indy-V16.5' } })
       .then(r => r.json())
       .then(d => {
         if(d.error) throw new Error();
         let a = d.address;
         let num = a.house_number;
-        let road = a.road || "Unnamed Location";
-        let city = a.city || a.town || "Indianapolis";
+        let road = a.road || "Location";
         let zip = a.postcode || "";
+        let city = a.city || a.town || "Indy";
         
         if(!num) {
-          // Scenario B: Approx
-          state.address = `Near ${d.name || road}, ${city} ${zip} (Approx)`;
-          if(d.lat) state.tether = L.polyline([latlng, [d.lat, d.lon]], {color: 'var(--red)', dashArray: '5,10'}).addTo(map);
+          state.address = `Near ${road}, ${city} ${zip} (Approx)`;
+          if(d.lat) state.tether = L.polyline([latlng, [d.lat, d.lon]], {color: 'var(--danger)', dashArray: '5,10'}).addTo(map);
         } else {
-          // Scenario A: Exact
           state.address = `${num} ${road}, ${city} ${zip}`;
         }
         updateUI();
@@ -361,20 +380,120 @@
     if(state.gridOpacity > 0.1) {
       lbl.innerText = "OFFICIAL CITY COORDINATES";
       val.innerText = state.cityCoords || "Calculating...";
-      val.style.color = "var(--red)";
+      val.style.color = "var(--danger)";
     } else {
       lbl.innerText = "STANDARD ADDRESS";
       val.innerText = state.address || "Loading...";
-      val.style.color = "var(--text)";
+      val.style.color = "var(--text-main)";
     }
   }
 
-  // --- 6. SAVED POINTS (PERSISTENCE) ---
+  // --- 6. PHYSICS & UI (TOGGLE + SHEET) ---
+  window.toggleMapMode = () => {
+    state.mode = state.mode === 'clean' ? 'sat' : 'clean';
+    
+    // Animate Slide
+    const toggle = document.getElementById('mode-toggle');
+    if (state.mode === 'sat') toggle.classList.add('sat-mode');
+    else toggle.classList.remove('sat-mode');
+
+    // Switch Layer
+    if(baseLayer) map.removeLayer(baseLayer);
+    baseLayer = L.tileLayer(state.mode === 'clean' ? engines.clean.voyager.url : engines.sat.esri.url, {maxZoom: 19}).addTo(map);
+    baseLayer.bringToBack();
+  };
+
+  // Sheet Physics (1:1 Tracking)
+  const sheet = document.getElementById('bottom-sheet');
+  const handle = document.getElementById('sheet-handle');
+  let startY = 0, currentY = 0, isDragging = false;
+
+  handle.addEventListener('touchstart', e => {
+    startY = e.touches[0].clientY;
+    isDragging = true;
+    sheet.style.transition = 'none'; // Instant follow
+  }, {passive:true});
+
+  handle.addEventListener('touchmove', e => {
+    if(!isDragging) return;
+    const y = e.touches[0].clientY;
+    const delta = y - startY;
+    if(delta > 0) sheet.style.transform = `translateY(${delta}px)`;
+  }, {passive:true});
+
+  handle.addEventListener('touchend', e => {
+    isDragging = false;
+    sheet.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
+    const delta = e.changedTouches[0].clientY - startY;
+    
+    // Tap Detection
+    if(Math.abs(delta) < 10) {
+        const isMin = sheet.classList.contains('minimized');
+        sheet.style.transform = isMin ? 'translateY(0)' : 'translateY(calc(100% - 30px))';
+        sheet.classList.toggle('minimized');
+        return;
+    }
+
+    // Snap Logic
+    if(delta > 50) {
+        sheet.style.transform = 'translateY(calc(100% - 30px))';
+        sheet.classList.add('minimized');
+    } else {
+        sheet.style.transform = 'translateY(0)';
+        sheet.classList.remove('minimized');
+    }
+  });
+
+  // --- 7. SAVED POINTS & MODALS ---
+  window.toggleMenu = () => {
+    // Global Reset Check
+    const openModal = Array.from(document.querySelectorAll('.modal')).find(m => m.style.display === 'flex');
+    if (openModal) toggleModal('none');
+    else toggleModal('menu-modal');
+  };
+
+  window.toggleModal = (id) => {
+    document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+    const m = document.getElementById(id);
+    if(m) {
+        m.style.display = 'flex';
+        if(window.innerWidth > 768) { m.style.top = '100px'; m.style.left = '20px'; }
+        if(id === 'saved-modal') renderSavedList();
+        if(id === 'history-modal') renderHistoryList();
+        if(id === 'map-select') renderMapList();
+    }
+  };
+
+  // Draggable Modals (Header Only)
+  ['menu-handle', 'saved-handle', 'history-handle', 'map-handle'].forEach(id => {
+      const h = document.getElementById(id);
+      if(h) makeDraggable(h, h.parentElement);
+  });
+
+  function makeDraggable(header, modal) {
+      if(window.innerWidth <= 768) return; // Mobile: No drag
+      let startX, startY, initX, initY;
+      header.onmousedown = e => {
+          e.preventDefault();
+          startX = e.clientX; startY = e.clientY;
+          const style = window.getComputedStyle(modal);
+          const matrix = new WebKitCSSMatrix(style.transform);
+          initX = matrix.m41; initY = matrix.m42;
+          document.onmousemove = e => {
+              const dx = e.clientX - startX;
+              const dy = e.clientY - startY;
+              modal.style.transform = `translate(${initX + dx}px, ${initY + dy}px)`;
+          };
+          document.onmouseup = () => { document.onmousemove = null; document.onmouseup = null; };
+      };
+  }
+
+  // --- 8. HELPERS & RENDERING ---
   function renderSavedMarkers() {
     state.savedLayerGroup.clearLayers();
-    state.saved.forEach(p => {
+    state.saved.forEach((p, i) => {
       L.circleMarker([p.lat, p.lng], { radius: 6, color: 'white', fillColor: 'var(--green)', fillOpacity: 1, weight: 2 })
-       .bindPopup(`<b>${p.addr}</b><br>${p.notes || ''}`)
+       .bindPopup(`<b>${p.addr}</b><br><input type="text" value="${p.notes}" onchange="updateNote(${i}, this.value)" style="margin-top:5px; width:100%">`)
        .addTo(state.savedLayerGroup);
     });
   }
@@ -388,124 +507,24 @@
     showToast("Saved!");
   };
 
-  window.updateNote = (index, val) => {
-    state.saved[index].notes = val;
+  window.updateNote = (i, val) => {
+    state.saved[i].notes = val;
     localStorage.setItem('ri_saved', JSON.stringify(state.saved));
     renderSavedMarkers();
   };
 
-  window.deletePoint = (index) => {
-    state.saved.splice(index, 1);
+  window.deletePoint = (i) => {
+    state.saved.splice(i, 1);
     localStorage.setItem('ri_saved', JSON.stringify(state.saved));
     renderSavedMarkers();
     renderSavedList();
   };
 
-  // --- 7. PHYSICS ENGINE (Unified) ---
-  setupPhysics(document.getElementById('sheet-handle'), document.getElementById('bottom-sheet'), 'sheet');
-  setupPhysics(document.getElementById('menu-handle'), document.getElementById('menu-modal'), 'modal');
-  setupPhysics(document.getElementById('saved-handle'), document.getElementById('saved-modal'), 'modal');
-  setupPhysics(document.getElementById('history-handle'), document.getElementById('history-modal'), 'modal');
-  setupPhysics(document.getElementById('map-handle'), document.getElementById('map-select'), 'modal');
-
-  function setupPhysics(trigger, element, type) {
-    if (!trigger || !element) return;
-    let startY = 0, startX = 0, startTime = 0;
-    let currentY = 0, currentX = 0;
-
-    const start = (y, x) => {
-      startY = y; startX = x; startTime = Date.now();
-      element.style.transition = 'none';
-      if(type === 'modal') {
-         const style = window.getComputedStyle(element);
-         const matrix = new WebKitCSSMatrix(style.transform);
-         currentY = matrix.m42; currentX = matrix.m41;
-      }
-    };
-
-    const move = (y, x) => {
-      const deltaY = y - startY;
-      const deltaX = x - startX;
-      if (type === 'sheet') {
-        if (deltaY > 0) element.style.transform = `translateY(${deltaY}px)`;
-      } else {
-        element.style.transform = `translate(${currentX + deltaX}px, ${currentY + deltaY}px)`;
-      }
-    };
-
-    const end = (y) => {
-      const deltaY = y - startY;
-      const time = Date.now() - startTime;
-      element.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
-
-      if (Math.abs(deltaY) < 10 && time < 250) {
-        if (type === 'sheet') element.classList.toggle('minimized');
-        element.style.transform = '';
-        return;
-      }
-
-      if (type === 'sheet') {
-        if (deltaY > 50) { element.style.transform = 'translateY(calc(100% - 30px))'; element.classList.add('minimized'); }
-        else { element.style.transform = 'translateY(0)'; element.classList.remove('minimized'); }
-      }
-    };
-
-    trigger.addEventListener('touchstart', e => start(e.touches[0].clientY, e.touches[0].clientX), {passive:true});
-    trigger.addEventListener('touchmove', e => move(e.touches[0].clientY, e.touches[0].clientX), {passive:true});
-    trigger.addEventListener('touchend', e => end(e.changedTouches[0].clientY));
-    
-    trigger.addEventListener('mousedown', e => {
-        start(e.clientY, e.clientX);
-        const moveFn = ev => move(ev.clientY, ev.clientX);
-        const endFn = ev => { end(ev.clientY); document.removeEventListener('mousemove', moveFn); document.removeEventListener('mouseup', endFn); };
-        document.addEventListener('mousemove', moveFn);
-        document.addEventListener('mouseup', endFn);
-    });
-  }
-
-  // --- 8. SMART MENU & HELPERS ---
-  window.toggleMenu = () => {
-    // Check if any modal is open
-    const openModal = Array.from(document.querySelectorAll('.modal')).find(m => m.style.display === 'flex');
-    if (openModal) {
-        // Global Reset: Close all
-        toggleModal('none');
-    } else {
-        // Open Main Menu
-        toggleModal('menu-modal');
-    }
-  };
-
-  window.toggleModal = (id) => {
-    document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-    const m = document.getElementById(id);
-    if(m) {
-        m.style.display = 'flex';
-        m.style.transform = 'translate(0,0)';
-        if(window.innerWidth > 768) { m.style.top = '100px'; m.style.left = '20px'; }
-        if(id === 'saved-modal') renderSavedList();
-        if(id === 'history-modal') renderHistoryList();
-        if(id === 'map-select') renderMapList();
-    }
-  };
-
-  window.smartNav = (type) => {
-    if(!state.lat) return showToast("Select location");
-    let url;
-    if(type === 'google') url = `https://www.google.com/maps/search/?api=1&query=${state.lat},${state.lng}`;
-    if(type === 'street') url = `https://www.google.com/maps/search/?api=1&query=[Lat],[Lng]&layer=c&cbll=[Lat],[Lng]?layer=c&cbll=${state.lat},${state.lng}`; // Universal Street View
-    if(type === 'apple') url = `http://maps.apple.com/?q=${state.lat},${state.lng}`;
-    
-    if (isMobile) window.location.href = url;
-    else window.open(url, '_blank');
-  };
-
-  // Rendering
   function renderSavedList() {
     document.getElementById('saved-list').innerHTML = state.saved.map((p, i) => `
       <div class="list-item">
-        <div style="flex:1"><strong>${p.addr}</strong><br><input type="text" class="note-input" value="${p.notes}" placeholder="Add note..." onchange="updateNote(${i}, this.value)"></div>
-        <button onclick="deletePoint(${i})" style="color:var(--red); border:none; background:none; font-size:20px;">✕</button>
+        <div style="flex:1"><strong>${p.addr}</strong><br><input type="text" class="note-input" value="${p.notes}" placeholder="Note..." onchange="updateNote(${i}, this.value)"></div>
+        <button onclick="deletePoint(${i})" style="color:var(--danger); border:none; background:none; font-size:20px;">✕</button>
       </div>
     `).join('');
   }
@@ -527,22 +546,13 @@
             if(baseLayer) map.removeLayer(baseLayer);
             baseLayer = L.tileLayer(engines.clean[k].url, {maxZoom:19}).addTo(map);
             baseLayer.bringToBack();
-            toggleModal('map-select');
+            toggleModal('none');
         };
         list.appendChild(d);
     });
   }
 
   // --- 9. UTILS ---
-  window.setMode = (m) => {
-    state.mode = m;
-    document.getElementById('tog-map').classList.toggle('active', m === 'clean');
-    document.getElementById('tog-sat').classList.toggle('active', m === 'sat');
-    if(baseLayer) map.removeLayer(baseLayer);
-    baseLayer = L.tileLayer(m === 'clean' ? engines.clean.voyager.url : engines.sat.esri.url, {maxZoom: 19}).addTo(map);
-    baseLayer.bringToBack();
-  };
-
   document.getElementById('gridSlider').addEventListener('input', (e) => {
     state.gridOpacity = e.target.value;
     layerGrid.setOpacity(state.gridOpacity);
@@ -552,6 +562,15 @@
   window.smartCopy = () => {
     const txt = state.gridOpacity > 0.1 ? `${state.address} [${state.cityCoords}]` : state.address;
     navigator.clipboard.writeText(txt).then(() => showToast("Copied!"));
+  };
+
+  window.smartNav = (type) => {
+    if(!state.lat) return showToast("Select location");
+    let url;
+    if(type === 'google') url = `https://www.google.com/maps/search/?api=1&query=${state.lat},${state.lng}`;
+    if(type === 'street') url = `https://www.google.com/maps/search/?api=1&query=[Lat],[Lng]&layer=c&cbll=[Lat],[Lng]?layer=c&cbll=${state.lat},${state.lng}`; // V16 Fix
+    if(type === 'apple') url = `http://maps.apple.com/?q=${state.lat},${state.lng}`;
+    window.location.href = url;
   };
 
   function showToast(msg) {
@@ -567,13 +586,19 @@
     localStorage.setItem('ri_history', JSON.stringify(state.history));
   }
 
+  // --- 10. INTELLIGENT SEARCH (Context Aware) ---
   let typeTimer;
   window.handleTyping = () => {
     clearTimeout(typeTimer);
     const q = document.getElementById('search-input').value;
     if(q.length < 3) return;
+    
+    // Get Bounds for Context
+    const b = map.getBounds();
+    const viewbox = `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`;
+
     typeTimer = setTimeout(() => {
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q+", Indianapolis")}&addressdetails=1`, {headers:{'User-Agent':'Request-Indy-V15'}})
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&viewbox=${viewbox}&bounded=1&addressdetails=1`, {headers:{'User-Agent':'Request-Indy-V16.5'}})
         .then(r=>r.json()).then(data=>{
             const list = document.getElementById('autocomplete-results');
             list.innerHTML = ""; list.style.display = 'block';
