@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Request-Indy V17</title>
+  <title>Request-Indy V18</title>
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -38,6 +38,9 @@
       -webkit-tap-highlight-color: transparent;
       -webkit-font-smoothing: antialiased;
     }
+
+    /* UTILITY: NO SELECT (Touch Polish) */
+    .no-select { user-select: none; -webkit-user-select: none; }
 
     /* Z-INDEX STRATEGY */
     #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 0; }
@@ -181,12 +184,12 @@
 
   <div class="top-container ui-layer">
     <div class="top-bar glass">
-      <button class="btn-find" onclick="handleFindMe()">Find Me</button>
+      <button class="btn-find no-select" onclick="handleFindMe()">Find Me</button>
       <div class="search-wrap">
         <input type="text" id="search-input" placeholder="Search..." oninput="handleTyping()">
       </div>
       
-      <div class="slide-toggle-container" id="mode-toggle" onclick="toggleMapMode()">
+      <div class="slide-toggle-container no-select" id="mode-toggle" onclick="toggleMapMode()">
         <div class="slide-bg"></div>
         <div class="slide-labels">
           <div class="slide-opt">Map</div>
@@ -194,47 +197,47 @@
         </div>
       </div>
       
-      <button class="icon-btn" onclick="toggleMenu()">☰</button>
+      <button class="icon-btn no-select" onclick="toggleMenu()">☰</button>
     </div>
   </div>
 
   <div id="autocomplete-results" class="autocomplete-layer glass"></div>
 
   <div id="menu-modal" class="modal modal-layer glass">
-    <div class="modal-header" id="menu-handle"><h3 class="modal-title">Menu</h3></div>
+    <div class="modal-header no-select" id="menu-handle"><h3 class="modal-title">Menu</h3></div>
     <div class="modal-body">
-      <button class="btn btn-gray" onclick="toggleModal('map-select')" style="width:100%; margin-bottom:10px">Map Style</button>
-      <button class="btn btn-gray" onclick="toggleModal('saved-modal')" style="width:100%; margin-bottom:10px">Saved Points</button>
-      <button class="btn btn-gray" onclick="toggleModal('history-modal')" style="width:100%; margin-bottom:10px">History</button>
-      <button class="btn btn-outline" onclick="toggleModal('none')" style="width:100%">Close Menu</button>
+      <button class="btn btn-gray no-select" onclick="toggleModal('map-select')" style="width:100%; margin-bottom:10px">Map Style</button>
+      <button class="btn btn-gray no-select" onclick="toggleModal('saved-modal')" style="width:100%; margin-bottom:10px">Saved Points</button>
+      <button class="btn btn-gray no-select" onclick="toggleModal('history-modal')" style="width:100%; margin-bottom:10px">History</button>
+      <button class="btn btn-outline no-select" onclick="toggleModal('none')" style="width:100%">Close Menu</button>
     </div>
   </div>
 
   <div id="map-select" class="modal modal-layer glass">
-    <div class="modal-header" id="map-handle"><h3 class="modal-title">Map Style</h3></div>
+    <div class="modal-header no-select" id="map-handle"><h3 class="modal-title">Map Style</h3></div>
     <div class="modal-body" id="map-list"></div>
-    <div style="padding:10px"><button class="btn btn-outline" onclick="toggleModal('none')" style="width:100%">Close</button></div>
+    <div style="padding:10px"><button class="btn btn-outline no-select" onclick="toggleModal('none')" style="width:100%">Close</button></div>
   </div>
 
   <div id="saved-modal" class="modal modal-layer glass">
-    <div class="modal-header" id="saved-handle"><h3 class="modal-title">Saved</h3></div>
+    <div class="modal-header no-select" id="saved-handle"><h3 class="modal-title">Saved</h3></div>
     <div class="modal-body">
       <div id="saved-list"></div>
-      <button class="btn btn-blue" onclick="exportList()" style="width:100%; margin-top:10px">Copy List</button>
-      <button class="btn btn-outline" onclick="toggleModal('none')" style="width:100%; margin-top:10px">Close</button>
+      <button class="btn btn-blue no-select" onclick="exportList()" style="width:100%; margin-top:10px">Copy List</button>
+      <button class="btn btn-outline no-select" onclick="toggleModal('none')" style="width:100%; margin-top:10px">Close</button>
     </div>
   </div>
 
   <div id="history-modal" class="modal modal-layer glass">
-    <div class="modal-header" id="history-handle"><h3 class="modal-title">History</h3></div>
+    <div class="modal-header no-select" id="history-handle"><h3 class="modal-title">History</h3></div>
     <div class="modal-body" id="history-list"></div>
-    <div style="padding:10px"><button class="btn btn-outline" onclick="toggleModal('none')" style="width:100%">Close</button></div>
+    <div style="padding:10px"><button class="btn btn-outline no-select" onclick="toggleModal('none')" style="width:100%">Close</button></div>
   </div>
 
   <div id="map"></div>
 
   <div class="bottom-sheet ui-layer glass" id="bottom-sheet">
-    <div class="handle-area" id="sheet-handle"><div class="handle-bar"></div></div>
+    <div class="handle-area no-select" id="sheet-handle"><div class="handle-bar"></div></div>
 
     <div class="info-display">
       <span class="label-micro" id="data-label">Standard Address</span>
@@ -242,13 +245,13 @@
     </div>
 
     <div class="btn-grid">
-      <button class="btn btn-blue" onclick="savePoint()">Save Point</button>
-      <button class="btn btn-gray" onclick="smartCopy()">Copy Current Location</button>
+      <button class="btn btn-blue no-select" onclick="savePoint()">Save Point</button>
+      <button class="btn btn-gray no-select" onclick="smartCopy()">Copy Current Location</button>
     </div>
 
     <div class="btn-grid">
-      <button class="btn btn-outline" onclick="smartNav('google')">Google Maps</button>
-      <button class="btn btn-outline" onclick="smartNav('apple')">Apple Maps</button>
+      <button class="btn btn-outline no-select" onclick="smartNav('google')">Google Maps</button>
+      <button class="btn btn-outline no-select" onclick="smartNav('apple')">Apple Maps</button>
     </div>
 
     <div class="slider-row">
@@ -347,7 +350,7 @@
     }
 
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latlng.lat}&lon=${latlng.lng}&addressdetails=1`;
-    fetch(url, { headers: { 'User-Agent': 'Request-Indy-V17' } })
+    fetch(url, { headers: { 'User-Agent': 'Request-Indy-V18' } })
       .then(r => r.json())
       .then(d => {
         if(d.error) throw new Error();
@@ -443,9 +446,47 @@
         sheet.classList.remove('minimized');
     }
   });
+  
+  // Mouse Support for Desktop Dragging
+  handle.addEventListener('mousedown', e => {
+      startY = e.clientY;
+      isDragging = true;
+      sheet.style.transition = 'none';
+      
+      const move = ev => {
+          if(!isDragging) return;
+          const delta = ev.clientY - startY;
+          if(delta > 0) sheet.style.transform = `translateY(${delta}px)`;
+      };
+      
+      const end = ev => {
+          isDragging = false;
+          sheet.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
+          document.removeEventListener('mousemove', move);
+          document.removeEventListener('mouseup', end);
+          
+          const delta = ev.clientY - startY;
+          if(Math.abs(delta) < 10) {
+              const isMin = sheet.classList.contains('minimized');
+              sheet.style.transform = isMin ? 'translateY(0)' : 'translateY(calc(100% - 30px))';
+              sheet.classList.toggle('minimized');
+              return;
+          }
+          if(delta > 50) {
+              sheet.style.transform = 'translateY(calc(100% - 30px))';
+              sheet.classList.add('minimized');
+          } else {
+              sheet.style.transform = 'translateY(0)';
+              sheet.classList.remove('minimized');
+          }
+      };
+      document.addEventListener('mousemove', move);
+      document.addEventListener('mouseup', end);
+  });
 
   // --- 7. SAVED POINTS & MODALS ---
   window.toggleMenu = () => {
+    // Global Reset Check
     const openModal = Array.from(document.querySelectorAll('.modal')).find(m => m.style.display === 'flex');
     if (openModal) toggleModal('none');
     else toggleModal('menu-modal');
@@ -596,7 +637,7 @@
     const viewbox = `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`;
 
     typeTimer = setTimeout(() => {
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&viewbox=${viewbox}&bounded=1&addressdetails=1`, {headers:{'User-Agent':'Request-Indy-V17'}})
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&viewbox=${viewbox}&bounded=1&addressdetails=1`, {headers:{'User-Agent':'Request-Indy-V18'}})
         .then(r=>r.json()).then(data=>{
             const list = document.getElementById('autocomplete-results');
             list.innerHTML = ""; list.style.display = 'block';
@@ -619,9 +660,7 @@
   window.checkEnter = (e) => {
       if(e.key === 'Enter') {
           clearTimeout(typeTimer);
-          const q = document.getElementById('search-input').value;
-          // Trigger immediate search
-          // (Implementation uses same logic as handleTyping but instant)
+          // Trigger immediate search if needed logic
       }
   }
 </script>
