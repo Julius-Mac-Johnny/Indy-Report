@@ -186,7 +186,7 @@
     <div class="top-bar glass">
       <button class="btn-find no-select" onclick="handleFindMe()">Find Me</button>
       <div class="search-wrap">
-        <input type="text" id="search-input" placeholder="Search..." oninput="handleTyping()">
+        <input type="text" id="search-input" placeholder="Search..." oninput="handleTyping()" onkeydown="checkEnter(event)">
       </div>
       
       <div class="slide-toggle-container no-select" id="mode-toggle" onclick="toggleMapMode()">
@@ -206,17 +206,10 @@
   <div id="menu-modal" class="modal modal-layer glass">
     <div class="modal-header no-select" id="menu-handle"><h3 class="modal-title">Menu</h3></div>
     <div class="modal-body">
-      <button class="btn btn-gray no-select" onclick="toggleModal('map-select')" style="width:100%; margin-bottom:10px">Map Style</button>
       <button class="btn btn-gray no-select" onclick="toggleModal('saved-modal')" style="width:100%; margin-bottom:10px">Saved Points</button>
       <button class="btn btn-gray no-select" onclick="toggleModal('history-modal')" style="width:100%; margin-bottom:10px">History</button>
       <button class="btn btn-outline no-select" onclick="toggleModal('none')" style="width:100%">Close Menu</button>
     </div>
-  </div>
-
-  <div id="map-select" class="modal modal-layer glass">
-    <div class="modal-header no-select" id="map-handle"><h3 class="modal-title">Map Style</h3></div>
-    <div class="modal-body" id="map-list"></div>
-    <div style="padding:10px"><button class="btn btn-outline no-select" onclick="toggleModal('none')" style="width:100%">Close</button></div>
   </div>
 
   <div id="saved-modal" class="modal modal-layer glass">
@@ -272,22 +265,19 @@
   };
 
   const engines = {
-    clean: { 
-      voyager: { name: "Carto Voyager", url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png' },
-      osm: { name: "OpenStreetMap", url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' },
-      esri: { name: "Esri Navigation", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}' }
-    },
-    sat: {
-      esri: { name: "Esri Satellite", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' }
-    }
+    clean: { name: "Carto Voyager", url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png' },
+    sat: { name: "Esri Satellite", url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' }
   };
 
   // --- 2. MAP SETUP ---
   const map = L.map('map', { zoomControl: false, tap: true }).setView([39.7684, -86.1581], 12);
-  let baseLayer = L.tileLayer(engines.clean.voyager.url, { maxZoom: 19 }).addTo(map);
+  let activeLayer = L.tileLayer(engines.clean.url, { maxZoom: 19 }).addTo(map);
   
+  // City Layers
   const cityUrl = 'https://xmaps.indy.gov/arcgis/rest/services/SalesForce/MAC311/MapServer';
   L.esri.dynamicMapLayer({ url: cityUrl, layers: [18], opacity: 0.9, f: 'json', useCors: false }).addTo(map);
+  
+  // Grid Layer (Bureaucracy) - Initialized at 0 opacity
   const layerGrid = L.esri.dynamicMapLayer({ url: cityUrl, layers: [16], opacity: 0, f: 'json', useCors: false }).addTo(map);
   
   state.savedLayerGroup = L.layerGroup().addTo(map);
@@ -393,6 +383,9 @@
 
   // --- 6. PHYSICS & UI (TOGGLE + SHEET) ---
   window.toggleMapMode = () => {
+    // 1. Remove old layer to prevent bleed-through
+    map.removeLayer(activeLayer);
+    
     state.mode = state.mode === 'clean' ? 'sat' : 'clean';
     
     // Animate Slide
@@ -400,10 +393,10 @@
     if (state.mode === 'sat') toggle.classList.add('sat-mode');
     else toggle.classList.remove('sat-mode');
 
-    // Switch Layer
-    if(baseLayer) map.removeLayer(baseLayer);
-    baseLayer = L.tileLayer(state.mode === 'clean' ? engines.clean.voyager.url : engines.sat.esri.url, {maxZoom: 19}).addTo(map);
-    baseLayer.bringToBack();
+    // 2. Add new layer
+    const url = state.mode === 'clean' ? engines.clean.url : engines.sat.url;
+    activeLayer = L.tileLayer(url, { maxZoom: 19 }).addTo(map);
+    activeLayer.bringToBack();
   };
 
   // Sheet Physics (1:1 Tracking)
@@ -500,12 +493,11 @@
         if(window.innerWidth > 768) { m.style.top = '100px'; m.style.left = '20px'; }
         if(id === 'saved-modal') renderSavedList();
         if(id === 'history-modal') renderHistoryList();
-        if(id === 'map-select') renderMapList();
     }
   };
 
   // Draggable Modals (Header Only)
-  ['menu-handle', 'saved-handle', 'history-handle', 'map-handle'].forEach(id => {
+  ['menu-handle', 'saved-handle', 'history-handle'].forEach(id => {
       const h = document.getElementById(id);
       if(h) makeDraggable(h, h.parentElement);
   });
@@ -573,23 +565,6 @@
     document.getElementById('history-list').innerHTML = state.history.map(p => `
       <div class="list-item"><div><strong>${p.addr}</strong><br><small>${p.ts}</small></div></div>
     `).join('');
-  }
-
-  function renderMapList() {
-    const list = document.getElementById('map-list');
-    list.innerHTML = "";
-    Object.keys(engines.clean).forEach(k => {
-        const d = document.createElement('div');
-        d.className = 'list-item';
-        d.innerHTML = `<strong>${engines.clean[k].name}</strong>`;
-        d.onclick = () => {
-            if(baseLayer) map.removeLayer(baseLayer);
-            baseLayer = L.tileLayer(engines.clean[k].url, {maxZoom:19}).addTo(map);
-            baseLayer.bringToBack();
-            toggleModal('none');
-        };
-        list.appendChild(d);
-    });
   }
 
   // --- 9. UTILS ---
@@ -660,7 +635,8 @@
   window.checkEnter = (e) => {
       if(e.key === 'Enter') {
           clearTimeout(typeTimer);
-          // Trigger immediate search if needed logic
+          const q = document.getElementById('search-input').value;
+          // Trigger immediate search (simplified)
       }
   }
 </script>
